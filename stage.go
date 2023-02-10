@@ -61,8 +61,7 @@ func (s *stage) Execute(ctx context.Context, task *Task) ([]Change, bool) {
 		errorDetails := err.Error()
 		task.ErrorDetails = &errorDetails
 		// in update query duration is appended to existing value
-		task.Duration = time.Since(start)
-		task.TotalDuration += task.Duration
+		task.TotalDuration += time.Since(start)
 	}
 	return changes, err != nil
 }
@@ -72,7 +71,13 @@ func Releases(fn Executor) Stage {
 		name:    ReleasesStage,
 		success: StepReleasesDone,
 		failure: StepReleasesFailed,
-		execute: fn,
+		execute: func(ctx context.Context, task *Task) ([]Change, error) {
+			changes, err := fn(ctx, task)
+			if err == nil {
+				task.Releases = len(changes)
+			}
+			return changes, err
+		},
 	}
 }
 
@@ -99,7 +104,13 @@ func Builds(fn Executor) Stage {
 		name:    BuildsStage,
 		success: StepBuildsDone,
 		failure: StepBuildsFailed,
-		execute: fn,
+		execute: func(ctx context.Context, task *Task) ([]Change, error) {
+			changes, err := fn(ctx, task)
+			if err == nil {
+				task.Builds = len(changes)
+			}
+			return changes, err
+		},
 	}
 }
 
@@ -137,12 +148,6 @@ func Callback() Stage {
 		failure: StepCallbackFailed,
 		execute: func(ctx context.Context, task *Task) ([]Change, error) {
 			if task.CallbackURL == nil {
-				if task.Changes[BuildsStage] != nil {
-					task.Builds = len(task.Changes[BuildsStage])
-				}
-				if task.Changes[ReleasesStage] != nil {
-					task.Releases = len(task.Changes[ReleasesStage])
-				}
 				payload, err := json.Marshal(task)
 				if err != nil {
 					return nil, fmt.Errorf("failed to marshal migration callback payload: %w", err)

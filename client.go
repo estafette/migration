@@ -126,6 +126,9 @@ func (c *client) authenticate() error {
 }
 
 func (c *client) QueueMigration(request TaskRequest) (*Task, error) {
+	if request.CallbackURL != nil && *request.CallbackURL == "" {
+		request.CallbackURL = nil
+	}
 	res, err := c.httpPost("/api/migrate", request)
 	if err != nil {
 		return nil, fmt.Errorf("error while queuing migration: %w", err)

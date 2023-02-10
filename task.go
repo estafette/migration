@@ -25,10 +25,8 @@ type Task struct {
 	Releases      int           `json:"releases"`
 	TotalDuration time.Duration `json:"totalDuration"`
 	ErrorDetails  *string       `json:"errorDetails,omitempty"`
-	Duration      time.Duration
-	QueuedAt      time.Time
-	UpdatedAt     time.Time
-	Changes       map[StageName][]Change
+	QueuedAt      time.Time     `json:"queuedAt,omitempty"`
+	UpdatedAt     time.Time     `json:"updatedAt,omitempty"`
 }
 
 func (t *Task) FromFQN() string {
