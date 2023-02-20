@@ -1,6 +1,10 @@
 package migration
 
-import "encoding/json"
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
+)
 
 const (
 	BuildLog   LogType = "builds"
@@ -179,6 +183,24 @@ func (s *Status) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (s *Status) Scan(src any) error {
+	if val, ok := src.(string); ok {
+		*s = StatusFrom(val)
+		return nil
+	}
+	return fmt.Errorf("unsupported Scan, storing driver.Value type %T into type %T", src, Status(-2))
+}
+
+func (s Status) Value() (driver.Value, error) {
+	if s.String() == "" {
+		return nil, fmt.Errorf("unsupported Value, returing empty string status as driver.Value")
+	}
+	if s.String() == "unknown" {
+		return nil, fmt.Errorf("unsupported Value, returing unknown status as driver.Value")
+	}
+	return s.String(), nil
+}
+
 func (s *Step) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
@@ -190,4 +212,19 @@ func (s *Step) UnmarshalJSON(data []byte) error {
 	}
 	*s = StepFrom(statusStr)
 	return nil
+}
+
+func (s *Step) Scan(src any) error {
+	if val, ok := src.(string); ok {
+		*s = StepFrom(val)
+		return nil
+	}
+	return fmt.Errorf("unsupported Scan, storing driver.Value type %T into type %T", src, Step(-1))
+}
+
+func (s Step) Value() (driver.Value, error) {
+	if s.String() != "unknown" {
+		return s.String(), nil
+	}
+	return nil, fmt.Errorf("unsupported Value, returing unknown step as driver.Value")
 }
