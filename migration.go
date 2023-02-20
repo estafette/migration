@@ -52,7 +52,7 @@ type Change struct {
 
 func StepFrom(str string) Step {
 	switch str {
-	case "":
+	case "waiting":
 		return StepWaiting
 	case "releases_failed":
 		return StepReleasesFailed
@@ -206,11 +206,11 @@ func (s *Step) MarshalJSON() ([]byte, error) {
 }
 
 func (s *Step) UnmarshalJSON(data []byte) error {
-	var statusStr string
-	if err := json.Unmarshal(data, &statusStr); err != nil {
+	var stepStr string
+	if err := json.Unmarshal(data, &stepStr); err != nil {
 		return err
 	}
-	*s = StepFrom(statusStr)
+	*s = StepFrom(stepStr)
 	return nil
 }
 

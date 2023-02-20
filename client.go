@@ -55,18 +55,6 @@ func NewClient(serverURL, clientID, clientSecret string) Client {
 	}
 }
 
-func handleBody(body any) (*bytes.Buffer, error) {
-	var payloadReader *bytes.Buffer
-	if body != nil {
-		payloadReader = &bytes.Buffer{}
-		if err := json.NewEncoder(payloadReader).Encode(body); err != nil {
-			return nil, fmt.Errorf("error while json encoding body: %w", err)
-		}
-		return payloadReader, nil
-	}
-	return nil, nil
-}
-
 func urlJoin(URL string, path ...string) string {
 	if u, err := url.JoinPath(URL, path...); err != nil {
 		panic(err)
@@ -84,12 +72,17 @@ func (c *client) httpGet(api string, body any) (*http.Response, error) {
 }
 
 func (c *client) request(method, url string, body any) (*http.Response, error) {
-	payload, err := handleBody(body)
-	if err != nil {
-		return nil, err
-	}
 	var httpReq *http.Request
-	httpReq, err = http.NewRequest(method, url, payload)
+	var err error
+	if body != nil {
+		payload := &bytes.Buffer{}
+		if err := json.NewEncoder(payload).Encode(body); err != nil {
+			return nil, fmt.Errorf("error while json encoding body: %w", err)
+		}
+		httpReq, err = http.NewRequest(method, url, payload)
+	} else {
+		httpReq, err = http.NewRequest(method, url, nil)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("error while creating http request [%s]%s %v: %w", method, url, body, err)
 	}
@@ -158,7 +151,7 @@ func (c *client) QueueMigration(request TaskRequest) (*Task, error) {
 }
 
 func (c *client) GetMigrationStatus(taskID string) (*Task, error) {
-	res, err := c.httpPost(urlJoin("/api/migrate", taskID), nil)
+	res, err := c.httpGet(urlJoin("/api/migrate", taskID), nil)
 	if err != nil {
 		return nil, fmt.Errorf("error while getting migration status: %w", err)
 	}
