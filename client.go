@@ -7,7 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"path"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -62,16 +62,25 @@ func handleBody(body any) (*bytes.Buffer, error) {
 		if err := json.NewEncoder(payloadReader).Encode(body); err != nil {
 			return nil, fmt.Errorf("error while json encoding body: %w", err)
 		}
+		return payloadReader, nil
 	}
-	return payloadReader, nil
+	return nil, nil
+}
+
+func urlJoin(URL string, path ...string) string {
+	if u, err := url.JoinPath(URL, path...); err != nil {
+		panic(err)
+	} else {
+		return u
+	}
 }
 
 func (c *client) httpPost(api string, body any) (*http.Response, error) {
-	return c.request("POST", path.Join(c.serverURL, api), body)
+	return c.request("POST", urlJoin(c.serverURL, api), body)
 }
 
 func (c *client) httpGet(api string, body any) (*http.Response, error) {
-	return c.request("GET", path.Join(c.serverURL, api), body)
+	return c.request("GET", urlJoin(c.serverURL, api), body)
 }
 
 func (c *client) request(method, url string, body any) (*http.Response, error) {
@@ -101,7 +110,7 @@ func (c *client) request(method, url string, body any) (*http.Response, error) {
 
 func (c *client) authenticate() error {
 	body := strings.NewReader(fmt.Sprintf(`{"clientID": "%s", "clientSecret": "%s"}`, c.clientID, c.clientSecret))
-	authReq, err := http.NewRequest("POST", path.Join(c.serverURL, "/api/auth/client/login"), body)
+	authReq, err := http.NewRequest("POST", urlJoin(c.serverURL, "/api/auth/client/login"), body)
 	if err != nil {
 		return fmt.Errorf("error while creating authentication request: %w", err)
 	}
@@ -133,21 +142,53 @@ func (c *client) QueueMigration(request TaskRequest) (*Task, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error while queuing migration: %w", err)
 	}
+	var body []byte
+	body, err = isResponseOK(res)
+	if err != nil {
+		if body != nil {
+			log.Printf("error response from /api/migrate: %s", string(body))
+		}
+		return nil, err
+	}
 	task := &Task{}
-	if err = json.NewDecoder(res.Body).Decode(&task); err != nil {
+	if err = json.Unmarshal(body, task); err != nil {
 		return nil, fmt.Errorf("error while reading migration response: %w", err)
 	}
 	return task, nil
 }
 
 func (c *client) GetMigrationStatus(taskID string) (*Task, error) {
-	res, err := c.httpPost(path.Join("/api/migrate", taskID), nil)
+	res, err := c.httpPost(urlJoin("/api/migrate", taskID), nil)
 	if err != nil {
 		return nil, fmt.Errorf("error while getting migration status: %w", err)
 	}
+	var body []byte
+	body, err = isResponseOK(res)
+	if err != nil {
+		if body != nil {
+			log.Printf("error response from /api/migrate: %s", string(body))
+		}
+		return nil, err
+	}
 	task := &Task{}
-	if err = json.NewDecoder(res.Body).Decode(&task); err != nil {
+	if err = json.Unmarshal(body, task); err != nil {
 		return nil, fmt.Errorf("error while reading migration response: %w", err)
 	}
 	return task, nil
+}
+
+func isResponseOK(res *http.Response) ([]byte, error) {
+	defer func(Body io.ReadCloser) {
+		if err := Body.Close(); err != nil {
+			log.Println("Error while closing the response body:", err)
+		}
+	}(res.Body)
+	bodyBytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading resposne body: %w", err)
+	}
+	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
+		return bodyBytes, fmt.Errorf("response with status: %s", res.Status)
+	}
+	return bodyBytes, nil
 }

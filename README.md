@@ -24,7 +24,7 @@ Follow below steps to use go client
   ```go
   package main
 
-  import "github.com/estafette/estafette-ci-api/migration"
+  import "github.com/estafette/migration"
 
   func main()  {
       client := migration.NewClient("https://api.estafette.io", "<Client-ID>", "<Client-Secret>")
@@ -55,7 +55,7 @@ Follow below steps to use go client
   ```go
   package main
 
-  import "github.com/estafette/estafette-ci-api/migration"
+  import "github.com/estafette/migration"
 
   func main()  {
       client := migration.NewClient("https://api.estafette.io", "<Client-ID>", "<Client-Secret>")
