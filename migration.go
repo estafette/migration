@@ -198,7 +198,7 @@ func (s Status) Value() (driver.Value, error) {
 	if s.String() == "unknown" {
 		return nil, fmt.Errorf("unsupported Value, returing unknown status as driver.Value")
 	}
-	return s.String(), nil
+	return int64(s), nil
 }
 
 func (s *Step) MarshalJSON() ([]byte, error) {
@@ -224,7 +224,7 @@ func (s *Step) Scan(src any) error {
 
 func (s Step) Value() (driver.Value, error) {
 	if s.String() != "unknown" {
-		return s.String(), nil
+		return int64(s), nil
 	}
 	return nil, fmt.Errorf("unsupported Value, returing unknown step as driver.Value")
 }
