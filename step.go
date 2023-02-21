@@ -6,24 +6,28 @@ import (
 	"fmt"
 )
 
+// Predefined steps are created with space between them in case we need to add more steps in between without modifying this library.
+
 const (
-	StepWaiting Step = iota
-	StepReleasesFailed
-	StepReleasesDone
-	StepReleaseLogsFailed
-	StepReleaseLogsDone
-	StepReleaseLogObjectsFailed
-	StepReleaseLogObjectsDone
-	StepBuildsFailed
-	StepBuildsDone
-	StepBuildLogsFailed
-	StepBuildLogsDone
-	StepBuildLogObjectsFailed
-	StepBuildLogObjectsDone
-	StepBuildVersionsFailed
-	StepBuildVersionsDone
-	StepCallbackFailed
-	StepCallbackDone
+	StepWaiting                 Step = 0
+	StepReleasesFailed          Step = 11
+	StepReleasesDone            Step = 12
+	StepReleaseLogsFailed       Step = 21
+	StepReleaseLogsDone         Step = 22
+	StepReleaseLogObjectsFailed Step = 31
+	StepReleaseLogObjectsDone   Step = 32
+	StepBuildsFailed            Step = 41
+	StepBuildsDone              Step = 42
+	StepBuildLogsFailed         Step = 51
+	StepBuildLogsDone           Step = 52
+	StepBuildLogObjectsFailed   Step = 61
+	StepBuildLogObjectsDone     Step = 62
+	StepBuildVersionsFailed     Step = 71
+	StepBuildVersionsDone       Step = 72
+	StepCallbackFailed          Step = 81
+	StepCallbackDone            Step = 82
+	StepCompletionFailed        Step = 991
+	StepCompletionDone          Step = 992
 )
 
 type Step int
@@ -95,6 +99,10 @@ func (s *Step) String() string {
 		return "callback_failed"
 	case StepCallbackDone:
 		return "callback_done"
+	case StepCompletionFailed:
+		return "completion_failed"
+	case StepCompletionDone:
+		return "completion_done"
 	default:
 		return "unknown"
 	}
@@ -136,6 +144,10 @@ func StepFrom(str string) Step {
 		return StepCallbackFailed
 	case "callback_done":
 		return StepCallbackDone
+	case "completion_failed":
+		return StepCompletionFailed
+	case "completion_done":
+		return StepCompletionDone
 	default:
 		return -1
 	}

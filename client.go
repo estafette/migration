@@ -14,6 +14,7 @@ var (
 	tokenTimeout = 175 * time.Minute
 )
 
+// Client for the estafette-ci-api migration API
 type Client interface {
 	QueueMigration(request TaskRequest) (*Task, error)
 	GetMigrationStatus(taskID string) (*Task, error)
@@ -36,6 +37,7 @@ type authResponse struct {
 	Token string `json:"token"`
 }
 
+// NewClient returns a new migration API Client for estafette-ci-api
 func NewClient(serverURL, clientID, clientSecret string) Client {
 	return &client{
 		Client: &http.Client{
@@ -52,14 +54,17 @@ func NewClient(serverURL, clientID, clientSecret string) Client {
 	}
 }
 
+// httpPost request for the given api endpoint with optional body
 func (c *client) httpPost(api string, body any) (*http.Response, error) {
-	return c.request("POST", urlJoin(c.serverURL, api), body)
+	return c.request("POST", _urlJoin(c.serverURL, api), body)
 }
 
+// httpGet request for the given api endpoint with optional body
 func (c *client) httpGet(api string, body any) (*http.Response, error) {
-	return c.request("GET", urlJoin(c.serverURL, api), body)
+	return c.request("GET", _urlJoin(c.serverURL, api), body)
 }
 
+// request handles request body encoding if provided and authentication if token has expired
 func (c *client) request(method, url string, body any) (*http.Response, error) {
 	var httpReq *http.Request
 	var err error
@@ -90,9 +95,10 @@ func (c *client) request(method, url string, body any) (*http.Response, error) {
 	return res, nil
 }
 
+// authenticate with estafette-ci-api using the clientID and clientSecret
 func (c *client) authenticate() error {
 	body := strings.NewReader(fmt.Sprintf(`{"clientID": "%s", "clientSecret": "%s"}`, c.clientID, c.clientSecret))
-	authReq, err := http.NewRequest("POST", urlJoin(c.serverURL, "/api/auth/client/login"), body)
+	authReq, err := http.NewRequest("POST", _urlJoin(c.serverURL, "/api/auth/client/login"), body)
 	if err != nil {
 		return fmt.Errorf("error while creating authentication request: %w", err)
 	}
@@ -112,6 +118,8 @@ func (c *client) authenticate() error {
 	return nil
 }
 
+// QueueMigration task in estafette. If the ID of the task is not provided,
+// it will be generated in Estafette server else existing task is updated
 func (c *client) QueueMigration(request TaskRequest) (*Task, error) {
 	if request.CallbackURL != nil && *request.CallbackURL == "" {
 		request.CallbackURL = nil
@@ -121,7 +129,7 @@ func (c *client) QueueMigration(request TaskRequest) (*Task, error) {
 		return nil, fmt.Errorf("error while queuing migration: %w", err)
 	}
 	var body []byte
-	body, err = isResponseOK(res)
+	body, err = _successful(res)
 	if err != nil {
 		return nil, err
 	}
@@ -132,13 +140,14 @@ func (c *client) QueueMigration(request TaskRequest) (*Task, error) {
 	return task, nil
 }
 
+// GetMigrationStatus of migration task using task ID
 func (c *client) GetMigrationStatus(taskID string) (*Task, error) {
-	res, err := c.httpGet(urlJoin("/api/migrate", taskID), nil)
+	res, err := c.httpGet(_urlJoin("/api/migrate", taskID), nil)
 	if err != nil {
 		return nil, fmt.Errorf("error while getting migration status: %w", err)
 	}
 	var body []byte
-	body, err = isResponseOK(res)
+	body, err = _successful(res)
 	if err != nil {
 		return nil, err
 	}

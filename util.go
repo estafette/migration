@@ -8,7 +8,7 @@ import (
 	"net/url"
 )
 
-func urlJoin(URL string, path ...string) string {
+func _urlJoin(URL string, path ...string) string {
 	if u, err := url.JoinPath(URL, path...); err != nil {
 		panic(err)
 	} else {
@@ -16,7 +16,7 @@ func urlJoin(URL string, path ...string) string {
 	}
 }
 
-func isResponseOK(res *http.Response) ([]byte, error) {
+func _successful(res *http.Response) ([]byte, error) {
 	defer _close(res.Body)
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
