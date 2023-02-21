@@ -30,6 +30,6 @@ func _successful(res *http.Response) ([]byte, error) {
 
 func _close(body io.ReadCloser) {
 	if err := body.Close(); err != nil {
-		log.Error().Err(err).Msg("error while closing the response body")
+		log.Error().Err(err).Msg("github.com/estafette/migration: error while closing the response body")
 	}
 }

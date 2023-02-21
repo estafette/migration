@@ -26,6 +26,7 @@ type stages struct {
 // NewStages creates a new Stages instance which uses the given Updater to update the status of tasks.
 func NewStages(updater Updater, start Step) Stages {
 	return &stages{
+		current: -1,
 		updater: updater,
 		start:   start,
 	}
@@ -37,6 +38,7 @@ func (ss *stages) Set(name StageName, executor Executor) Stages {
 	for index, s := range ss.stages {
 		if s.Name() == name {
 			ss.stages[index].execute = executor
+			log.Debug().Msgf("github.com/estafette/migration: overriding stage %s", name)
 			return ss
 		}
 	}
@@ -46,15 +48,16 @@ func (ss *stages) Set(name StageName, executor Executor) Stages {
 		failure: name.FailedStep(),
 		execute: executor,
 	})
+	log.Debug().Msgf("github.com/estafette/migration: appended stage %s", name)
 	sort.Slice(ss.stages, func(i, j int) bool {
 		return ss.stages[i].Failure() < ss.stages[j].Failure()
 	})
 	for i, s := range ss.stages {
 		if ss.start < s.Failure() {
-			continue
+			break
 		}
-		ss.current = i
-		break
+		ss.current = i - 1
+		log.Debug().Msgf("github.com/estafette/migration: skipping stage %s\n", s.Name())
 	}
 	return ss
 }
@@ -75,7 +78,7 @@ func (ss *stages) Next() Stage {
 
 // Current returns the current stage or nil if there is no current stage.
 func (ss *stages) Current() Stage {
-	if ss.current >= len(ss.stages) {
+	if ss.current == -1 || ss.current >= len(ss.stages) {
 		return nil
 	}
 	return ss.stages[ss.current]
@@ -87,12 +90,12 @@ func (ss *stages) ExecuteNext(ctx context.Context, task *Task) (change []Change,
 	change, failed = ss.Next().Execute(ctx, task)
 	err := ss.updater(ctx, task)
 	if err != nil {
-		log.Error().Err(err).Str("taskID", task.ID).Msg("error updating migration status")
+		log.Error().Err(err).Str("taskID", task.ID).Msg("github.com/estafette/migration: error updating migration status")
 		return
 	}
 	log.Info().
 		Dur("took", task.TotalDuration-start).
 		Str("taskID", task.ID).Str("fromFQN", task.FromFQN()).Str("toFQN", task.ToFQN()).Str("stage", string(ss.Current().Name())).
-		Msg("migration stage: done")
+		Msg("github.com/estafette/migration: stage done")
 	return
 }

@@ -41,7 +41,7 @@ func (s *stage) Execute(ctx context.Context, task *Task) ([]Change, bool) {
 		task.LastStep = s.Failure()
 		errorDetails := err.Error()
 		task.ErrorDetails = &errorDetails
-		log.Error().Err(err).Str("taskID", task.ID).Str("stage", string(s.Name())).Msg("migration stage: failed")
+		log.Error().Err(err).Str("taskID", task.ID).Str("stage", string(s.Name())).Msg("github.com/estafette/migration: stage failed")
 		return nil, true
 	}
 	// in update query duration is appended to existing value

@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -97,6 +99,7 @@ func (c *client) request(method, url string, body any) (*http.Response, error) {
 
 // authenticate with estafette-ci-api using the clientID and clientSecret
 func (c *client) authenticate() error {
+	log.Debug().Msgf("github.com/estafette/migration: authenticating with estafette-ci-api using clientID %s", c.clientID)
 	body := strings.NewReader(fmt.Sprintf(`{"clientID": "%s", "clientSecret": "%s"}`, c.clientID, c.clientSecret))
 	authReq, err := http.NewRequest("POST", _urlJoin(c.serverURL, "/api/auth/client/login"), body)
 	if err != nil {
