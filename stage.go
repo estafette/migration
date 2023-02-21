@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/rs/zerolog/log"
 	"net/http"
 	"time"
 )
@@ -60,10 +61,12 @@ func (s *stage) Execute(ctx context.Context, task *Task) ([]Change, bool) {
 		task.LastStep = s.Failure()
 		errorDetails := err.Error()
 		task.ErrorDetails = &errorDetails
-		// in update query duration is appended to existing value
-		task.TotalDuration += time.Since(start)
+		log.Error().Err(err).Msgf("migration stage %s: execution failed", s.name)
+		return nil, true
 	}
-	return changes, err != nil
+	// in update query duration is appended to existing value
+	task.TotalDuration += time.Since(start)
+	return changes, false
 }
 
 func Releases(fn Executor) Stage {

@@ -4,10 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
-	"log"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 )
@@ -52,14 +49,6 @@ func NewClient(serverURL, clientID, clientSecret string) Client {
 			clientSecret: clientSecret,
 		},
 		serverURL: strings.TrimSuffix(serverURL, "/"),
-	}
-}
-
-func urlJoin(URL string, path ...string) string {
-	if u, err := url.JoinPath(URL, path...); err != nil {
-		panic(err)
-	} else {
-		return u
 	}
 }
 
@@ -112,11 +101,7 @@ func (c *client) authenticate() error {
 	if err != nil {
 		return fmt.Errorf("error while authenticatiing: %w", err)
 	}
-	defer func(Body io.ReadCloser) {
-		if err = Body.Close(); err != nil {
-			log.Println("Error while closing the response body:", err)
-		}
-	}(resp.Body)
+	defer _close(resp.Body)
 	var authResp authResponse
 	err = json.NewDecoder(resp.Body).Decode(&authResp)
 	if err != nil {
@@ -138,9 +123,6 @@ func (c *client) QueueMigration(request TaskRequest) (*Task, error) {
 	var body []byte
 	body, err = isResponseOK(res)
 	if err != nil {
-		if body != nil {
-			log.Printf("error response from /api/migrate: %s", string(body))
-		}
 		return nil, err
 	}
 	task := &Task{}
@@ -158,9 +140,6 @@ func (c *client) GetMigrationStatus(taskID string) (*Task, error) {
 	var body []byte
 	body, err = isResponseOK(res)
 	if err != nil {
-		if body != nil {
-			log.Printf("error response from /api/migrate: %s", string(body))
-		}
 		return nil, err
 	}
 	task := &Task{}
@@ -168,20 +147,4 @@ func (c *client) GetMigrationStatus(taskID string) (*Task, error) {
 		return nil, fmt.Errorf("error while reading migration response: %w", err)
 	}
 	return task, nil
-}
-
-func isResponseOK(res *http.Response) ([]byte, error) {
-	defer func(Body io.ReadCloser) {
-		if err := Body.Close(); err != nil {
-			log.Println("Error while closing the response body:", err)
-		}
-	}(res.Body)
-	bodyBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading resposne body: %w", err)
-	}
-	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
-		return bodyBytes, fmt.Errorf("response with status: %s", res.Status)
-	}
-	return bodyBytes, nil
 }
