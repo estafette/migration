@@ -33,7 +33,7 @@ func NewStages(updater Updater, start Step) Stages {
 
 // Set the executor for the given stage name. If the stage does not exist it will be created.
 // Order of this function's call does not matter, The stages are sorted by Step.
-func (ss stages) Set(name StageName, executor Executor) Stages {
+func (ss *stages) Set(name StageName, executor Executor) Stages {
 	for index, s := range ss.stages {
 		if s.Name() == name {
 			ss.stages[index].execute = executor
@@ -60,12 +60,12 @@ func (ss stages) Set(name StageName, executor Executor) Stages {
 }
 
 // HasNext returns true if there is a next stage.
-func (ss stages) HasNext() bool {
+func (ss *stages) HasNext() bool {
 	return ss.current+1 < len(ss.stages)
 }
 
 // Next returns the next stage or nil if there is no next stage.
-func (ss stages) Next() Stage {
+func (ss *stages) Next() Stage {
 	if !ss.HasNext() {
 		return nil
 	}
@@ -74,7 +74,7 @@ func (ss stages) Next() Stage {
 }
 
 // Current returns the current stage or nil if there is no current stage.
-func (ss stages) Current() Stage {
+func (ss *stages) Current() Stage {
 	if ss.current >= len(ss.stages) {
 		return nil
 	}
@@ -82,7 +82,7 @@ func (ss stages) Current() Stage {
 }
 
 // ExecuteNext executes the next stage, saves result to using Updater and returns the changes and if the stage failed.
-func (ss stages) ExecuteNext(ctx context.Context, task *Task) (change []Change, failed bool) {
+func (ss *stages) ExecuteNext(ctx context.Context, task *Task) (change []Change, failed bool) {
 	start := task.TotalDuration
 	change, failed = ss.Next().Execute(ctx, task)
 	err := ss.updater(ctx, task)
