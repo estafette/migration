@@ -57,7 +57,7 @@ func (ss *stages) Set(name StageName, executor Executor) Stages {
 			break
 		}
 		ss.current = i - 1
-		log.Debug().Msgf("github.com/estafette/migration: skipping stage %s\n", s.Name())
+		log.Info().Msgf("github.com/estafette/migration: skipping stage %s\n", s.Name())
 	}
 	return ss
 }
@@ -86,16 +86,24 @@ func (ss *stages) Current() Stage {
 
 // ExecuteNext executes the next stage, saves result to using Updater and returns the changes and if the stage failed.
 func (ss *stages) ExecuteNext(ctx context.Context, task *Task) (change []Change, failed bool) {
+	stg := ss.Next()
+	log.Info().Str("taskID", task.ID).Str("stage", string(stg.Name())).Msg("github.com/estafette/migration: stage started")
 	start := task.TotalDuration
-	change, failed = ss.Next().Execute(ctx, task)
+	change, failed = stg.Execute(ctx, task)
 	err := ss.updater(ctx, task)
 	if err != nil {
 		log.Error().Err(err).Str("taskID", task.ID).Msg("github.com/estafette/migration: error updating migration status")
 		return
 	}
+	if failed {
+		log.Info().
+			Str("taskID", task.ID).Str("fromFQN", task.FromFQN()).Str("toFQN", task.ToFQN()).Str("stage", string(stg.Name())).
+			Msg("task failed, stopping migration")
+		return
+	}
 	log.Info().
 		Dur("took", task.TotalDuration-start).
-		Str("taskID", task.ID).Str("fromFQN", task.FromFQN()).Str("toFQN", task.ToFQN()).Str("stage", string(ss.Current().Name())).
+		Str("taskID", task.ID).Str("fromFQN", task.FromFQN()).Str("toFQN", task.ToFQN()).Str("stage", string(stg.Name())).
 		Msg("github.com/estafette/migration: stage done")
 	return
 }
