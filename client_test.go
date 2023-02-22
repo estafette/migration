@@ -1,0 +1,150 @@
+package migration
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+)
+
+type mockClient struct {
+	mock.Mock
+}
+
+func (c *mockClient) Do(req *http.Request) (*http.Response, error) {
+	rArgs := c.Called(req)
+	return rArgs.Get(0).(*http.Response), rArgs.Error(1)
+}
+
+func TestNewClient(t *testing.T) {
+	c := NewClient("http://localhost:80/", "clientID", "clientSecret")
+	shouldBe := assert.New(t)
+	shouldBe.NotNil(c)
+	shouldBe.Equal("http://localhost:80", c.(*client).serverURL)
+}
+
+func TestClient_QueueMigration_Success(t *testing.T) {
+	mockedClient := &mockClient{}
+	c := &client{
+		httpClient: mockedClient,
+		bearerAuth: bearerAuth{
+			clientID:     "test-clientID",
+			clientSecret: "test-clientSecret",
+		},
+		serverURL: "http://localhost:80",
+	}
+	mockAuth(mockedClient).Once()
+	mockedClient.
+		On("Do", mock.Anything).
+		Return(&http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"id":"test-1","fromSource":"github.com","fromOwner":"estafette","fromName":"migration","toSource":"github.com","toOwner":"estafette_new","toName":"migration_new","status":"queued","lastStep":"waiting"}`))}, nil).
+		Once()
+	mockedClient.
+		On("Do", mock.Anything).
+		Return(&http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"id":"test-1","fromSource":"github.com","fromOwner":"estafette","fromName":"migration","toSource":"github.com","toOwner":"estafette_new","toName":"migration_new","status":"queued","lastStep":"waiting"}`))}, nil).
+		Once()
+	shouldBe := assert.New(t)
+	req := Request{FromSource: "github.com", FromOwner: "estafette", FromName: "migration", ToSource: "github.com", ToOwner: "estafette_new", ToName: "migration_new"}
+	_, err := c.QueueMigration(req)
+	shouldBe.Nil(err)
+	task, err := c.QueueMigration(req)
+	if shouldBe.Nil(err) {
+		shouldBe.Equal(&Task{
+			Request:  Request{ID: "test-1", FromSource: "github.com", FromOwner: "estafette", FromName: "migration", ToSource: "github.com", ToOwner: "estafette_new", ToName: "migration_new"},
+			Status:   StatusQueued,
+			LastStep: StepWaiting,
+		}, task)
+	}
+	if mockedClient.AssertExpectations(t) {
+		migrationReq := mockedClient.Calls[1].Arguments[0].(*http.Request)
+		shouldBe.NotNil(migrationReq)
+		shouldBe.Equal("POST", migrationReq.Method)
+		shouldBe.Equal("http://localhost:80/api/migrate", migrationReq.URL.String())
+		data, err := io.ReadAll(migrationReq.Body)
+		shouldBe.Nil(err)
+		shouldBe.Equal(`{"fromSource":"github.com","fromOwner":"estafette","fromName":"migration","toSource":"github.com","toOwner":"estafette_new","toName":"migration_new"}`, string(data))
+	}
+}
+
+func TestClient_QueueMigration_Failure(t *testing.T) {
+	mockedClient := &mockClient{}
+	c := &client{
+		httpClient: mockedClient,
+		bearerAuth: bearerAuth{
+			clientID:     "test-clientID",
+			clientSecret: "test-clientSecret",
+		},
+		serverURL: "http://localhost:80",
+	}
+	mockAuth(mockedClient).Once()
+	mockedClient.On("Do", mock.Anything).
+		Return(&http.Response{Status: "404 Not Found", StatusCode: 404, Body: io.NopCloser(strings.NewReader(`{"code":404,"message":"Pipeline not found"}`))}, nil).
+		Once()
+	shouldBe := assert.New(t)
+	req := Request{FromSource: "github.com", FromOwner: "estafette", FromName: "migration", ToSource: "github.com", ToOwner: "estafette_new", ToName: "migration_new"}
+	task, err := c.QueueMigration(req)
+	shouldBe.Nil(task)
+	shouldBe.Equal(fmt.Errorf("QueueMigration api: %w", fmt.Errorf(`responded with status: 404 Not Found, body: {"code":404,"message":"Pipeline not found"}`)), err)
+}
+
+func TestClient_GetMigrationStatus_Success(t *testing.T) {
+	mockedClient := &mockClient{}
+	c := &client{
+		httpClient: mockedClient,
+		bearerAuth: bearerAuth{
+			clientID:     "test-clientID",
+			clientSecret: "test-clientSecret",
+		},
+		serverURL: "http://localhost:80",
+	}
+	mockAuth(mockedClient).Once()
+	mockedClient.
+		On("Do", mock.Anything).
+		Return(&http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"id":"test-123","fromSource":"github.com","fromOwner":"estafette","fromName":"migration","toSource":"github.com","toOwner":"estafette_new","toName":"migration_new","status":"in_progress","lastStep":"releases_done"}`))}, nil).
+		Once()
+	shouldBe := assert.New(t)
+	task, err := c.GetMigrationStatus("test-123")
+	if shouldBe.Nil(err) {
+		shouldBe.Equal(&Task{
+			Request:  Request{ID: "test-123", FromSource: "github.com", FromOwner: "estafette", FromName: "migration", ToSource: "github.com", ToOwner: "estafette_new", ToName: "migration_new"},
+			Status:   StatusInProgress,
+			LastStep: StepReleasesDone,
+		}, task)
+	}
+	if mockedClient.AssertExpectations(t) {
+		migrationReq := mockedClient.Calls[1].Arguments[0].(*http.Request)
+		shouldBe.NotNil(migrationReq)
+		shouldBe.Equal("GET", migrationReq.Method)
+		shouldBe.Equal("http://localhost:80/api/migrate/test-123", migrationReq.URL.String())
+		shouldBe.Nil(migrationReq.Body)
+	}
+}
+
+func TestClient_GetMigrationStatus_Failure(t *testing.T) {
+	mockedClient := &mockClient{}
+	c := &client{
+		httpClient: mockedClient,
+		bearerAuth: bearerAuth{
+			clientID:     "test-clientID",
+			clientSecret: "test-clientSecret",
+		},
+		serverURL: "http://localhost:80",
+	}
+	mockAuth(mockedClient).Once()
+	mockedClient.On("Do", mock.Anything).
+		Return(&http.Response{Status: "404 Not Found", StatusCode: 404, Body: io.NopCloser(strings.NewReader(`{"code":404,"message":"migration task not found"}`))}, nil).
+		Once()
+	shouldBe := assert.New(t)
+	task, err := c.GetMigrationStatus("test-123")
+	shouldBe.Nil(task)
+	shouldBe.Equal(fmt.Errorf("GetMigrationStatus api: %w", fmt.Errorf(`responded with status: 404 Not Found, body: {"code":404,"message":"migration task not found"}`)), err)
+}
+
+func mockAuth(mockedClient *mockClient) *mock.Call {
+	return mockedClient.On("Do", mock.MatchedBy(func(req *http.Request) bool {
+		return req.URL.String() == "http://localhost:80/api/auth/client/login"
+	})).Return(&http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"token":"test-token"}`))}, nil)
+}

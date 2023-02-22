@@ -2,8 +2,9 @@ package migration
 
 import (
 	"context"
-	"github.com/rs/zerolog/log"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type Stage interface {
@@ -41,7 +42,7 @@ func (s *stage) Execute(ctx context.Context, task *Task) ([]Change, bool) {
 		task.LastStep = s.Failure()
 		errorDetails := err.Error()
 		task.ErrorDetails = &errorDetails
-		log.Error().Err(err).Str("taskID", task.ID).Str("stage", string(s.Name())).Msg("github.com/estafette/migration: stage failed")
+		log.Error().Str("module", "github.com/estafette/migration").Err(err).Str("taskID", task.ID).Str("stage", string(s.Name())).Msg("stage failed")
 		return nil, true
 	}
 	// in update query duration is appended to existing value

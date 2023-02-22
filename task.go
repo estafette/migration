@@ -9,8 +9,8 @@ import (
 
 var tld = regexp.MustCompile(`\.(com|org)`)
 
-type TaskRequest struct {
-	ID          string    `json:"id"`
+type Request struct {
+	ID          string    `json:"id,omitempty"`
 	FromSource  string    `json:"fromSource"`
 	FromOwner   string    `json:"fromOwner"`
 	FromName    string    `json:"fromName"`
@@ -22,7 +22,7 @@ type TaskRequest struct {
 }
 
 type Task struct {
-	TaskRequest   `json:",inline"`
+	Request       `json:",inline"`
 	Status        Status        `json:"status"`
 	LastStep      Step          `json:"lastStep"`
 	Builds        int           `json:"builds"`
