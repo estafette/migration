@@ -62,4 +62,5 @@ func TestStage_Execute_Failure(t *testing.T) {
 	shouldBe.Equal(Step(1), task.LastStep)
 	shouldBe.Equal(time.Duration(0), task.TotalDuration)
 	shouldBe.Equal(&expected, task.ErrorDetails)
+	shouldBe.Equal(StatusFailed, task.Status)
 }

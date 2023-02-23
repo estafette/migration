@@ -39,6 +39,7 @@ func (s *stage) Execute(ctx context.Context, task *Task) ([]Change, bool) {
 	changes, err := s.execute(ctx, task)
 	task.LastStep = s.Success()
 	if err != nil {
+		task.Status = StatusFailed
 		task.LastStep = s.Failure()
 		errorDetails := err.Error()
 		task.ErrorDetails = &errorDetails
