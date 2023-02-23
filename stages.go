@@ -52,7 +52,7 @@ func (ss *stages) ExecuteNext(ctx context.Context) ([]Change, bool) {
 		log.Warn().Str("module", "github.com/estafette/migration").Str("taskID", ss.task.ID).Msg("task failed, stopping migration")
 		return changes, failed
 	}
-	log.Info().Str("module", "github.com/estafette/migration").Dur("took", ss.task.TotalDuration-start).Str("taskID", ss.task.ID).Msg("stage done")
+	log.Info().Str("module", "github.com/estafette/migration").Dur("took", ss.task.TotalDuration-start).Str("taskID", ss.task.ID).Str("stage", string(stg.Name())).Msg("stage done")
 	return changes, failed
 }
 
