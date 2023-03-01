@@ -35,29 +35,25 @@ func TestTask_SqlArgs(t *testing.T) {
 	shouldbe := assert.New(t)
 	shouldbe.Equal(20, len(args))
 	shouldbe.Equal([]sql.NamedArg{
-		// id, status, lastStep
-		sql.Named("id", task.ID),
-		sql.Named("status", task.Status.String()),
-		sql.Named("lastStep", task.LastStep.String()),
-		sql.Named("builds", task.Builds),
-		sql.Named("releases", task.Releases),
+		sql.Named("updatedAt", task.UpdatedAt),
 		sql.Named("totalDuration", task.TotalDuration),
-		// From
-		sql.Named("fromSource", task.FromSource),
-		sql.Named("fromSourceName", tld.ReplaceAllString(task.FromSource, "")),
-		sql.Named("fromOwner", task.FromOwner),
-		sql.Named("fromName", task.FromName),
-		sql.Named("fromFullName", task.FromOwner+"/"+task.FromName),
-		// To
-		sql.Named("toSource", task.ToSource),
 		sql.Named("toSourceName", tld.ReplaceAllString(task.ToSource, "")),
+		sql.Named("toSource", task.ToSource),
 		sql.Named("toOwner", task.ToOwner),
 		sql.Named("toName", task.ToName),
 		sql.Named("toFullName", task.ToOwner+"/"+task.ToName),
-		// Other
-		sql.Named("callbackURL", task.CallbackURL),
-		sql.Named("errorDetails", task.ErrorDetails),
+		sql.Named("status", task.Status.String()),
+		sql.Named("releases", task.Releases),
 		sql.Named("queuedAt", task.QueuedAt),
-		sql.Named("updatedAt", task.UpdatedAt),
+		sql.Named("lastStep", task.LastStep.String()),
+		sql.Named("id", task.ID),
+		sql.Named("fromSourceName", tld.ReplaceAllString(task.FromSource, "")),
+		sql.Named("fromSource", task.FromSource),
+		sql.Named("fromOwner", task.FromOwner),
+		sql.Named("fromName", task.FromName),
+		sql.Named("fromFullName", task.FromOwner+"/"+task.FromName),
+		sql.Named("errorDetails", task.ErrorDetails),
+		sql.Named("callbackURL", task.CallbackURL),
+		sql.Named("builds", task.Builds),
 	}, args)
 }
