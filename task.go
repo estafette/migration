@@ -42,30 +42,27 @@ func (t *Task) ToFQN() string {
 }
 
 func (t *Task) SqlArgs() []sql.NamedArg {
+	// !NOTICE! The order of the arguments is important, it helps in replacing arguments in query.
 	return []sql.NamedArg{
-		// id, status, lastStep
-		sql.Named("id", t.ID),
-		sql.Named("status", t.Status.String()),
-		sql.Named("lastStep", t.LastStep.String()),
-		sql.Named("builds", t.Builds),
-		sql.Named("releases", t.Releases),
+		sql.Named("updatedAt", t.UpdatedAt),
 		sql.Named("totalDuration", t.TotalDuration),
-		// From
-		sql.Named("fromSource", t.FromSource),
-		sql.Named("fromSourceName", tld.ReplaceAllString(t.FromSource, "")),
-		sql.Named("fromOwner", t.FromOwner),
-		sql.Named("fromName", t.FromName),
-		sql.Named("fromFullName", t.FromOwner+"/"+t.FromName),
-		// To
-		sql.Named("toSource", t.ToSource),
 		sql.Named("toSourceName", tld.ReplaceAllString(t.ToSource, "")),
+		sql.Named("toSource", t.ToSource),
 		sql.Named("toOwner", t.ToOwner),
 		sql.Named("toName", t.ToName),
 		sql.Named("toFullName", t.ToOwner+"/"+t.ToName),
-		// Other
-		sql.Named("callbackURL", t.CallbackURL),
-		sql.Named("errorDetails", t.ErrorDetails),
+		sql.Named("status", t.Status.String()),
+		sql.Named("releases", t.Releases),
 		sql.Named("queuedAt", t.QueuedAt),
-		sql.Named("updatedAt", t.UpdatedAt),
+		sql.Named("lastStep", t.LastStep.String()),
+		sql.Named("id", t.ID),
+		sql.Named("fromSourceName", tld.ReplaceAllString(t.FromSource, "")),
+		sql.Named("fromSource", t.FromSource),
+		sql.Named("fromOwner", t.FromOwner),
+		sql.Named("fromName", t.FromName),
+		sql.Named("fromFullName", t.FromOwner+"/"+t.FromName),
+		sql.Named("errorDetails", t.ErrorDetails),
+		sql.Named("callbackURL", t.CallbackURL),
+		sql.Named("builds", t.Builds),
 	}
 }
