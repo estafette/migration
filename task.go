@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"regexp"
+	"sort"
 	"time"
 )
 
@@ -42,8 +43,7 @@ func (t *Task) ToFQN() string {
 }
 
 func (t *Task) SqlArgs() []sql.NamedArg {
-	// !NOTICE! The order of the arguments is important, it helps in replacing arguments in query.
-	return []sql.NamedArg{
+	args := []sql.NamedArg{
 		sql.Named("updatedAt", t.UpdatedAt),
 		sql.Named("totalDuration", t.TotalDuration),
 		sql.Named("toSourceName", tld.ReplaceAllString(t.ToSource, "")),
@@ -65,4 +65,9 @@ func (t *Task) SqlArgs() []sql.NamedArg {
 		sql.Named("callbackURL", t.CallbackURL),
 		sql.Named("builds", t.Builds),
 	}
+	// !NOTICE! The order of the arguments is important, it helps in replacing arguments in query.
+	sort.Slice(args, func(i, j int) bool {
+		return args[i].Name > args[j].Name
+	})
+	return args
 }
