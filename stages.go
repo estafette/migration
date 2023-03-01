@@ -44,7 +44,7 @@ func (ss *stages) Current() Stage {
 // ExecuteNext executes the next stage, saves result to using Updater and returns the changes and if the stage failed.
 func (ss *stages) ExecuteNext(ctx context.Context) (result bool) {
 	defer func() {
-		result = ss.updateStatus(ctx, result)
+		result = ss.updateStatus(result)
 	}()
 	stg := ss.Next()
 	log.Info().Str("module", "github.com/estafette/migration").Str("taskID", ss.task.ID).Str("stage", string(stg.Name())).Msg("stage started")
@@ -103,8 +103,8 @@ func (ss *stages) Set(name StageName, executor Executor) Stages {
 	return ss
 }
 
-func (ss *stages) updateStatus(ctx context.Context, result bool) bool {
-	if err := ss.updater(ctx, ss.task); err != nil {
+func (ss *stages) updateStatus(result bool) bool {
+	if err := ss.updater(context.Background(), ss.task); err != nil {
 		log.Error().Str("module", "github.com/estafette/migration").Err(err).Str("taskID", ss.task.ID).Msg("error updating migration status")
 		return false
 	}
