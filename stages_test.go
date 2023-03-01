@@ -35,7 +35,7 @@ func TestStages(t *testing.T) {
 	mockedUpdater := &mockUpdater{}
 	mockedUpdater.On("update", mock.Anything, mock.Anything).Return(nil)
 	mockedExecutor := &mockExecutor{}
-	mockedExecutor.On("execute", mock.Anything, mock.Anything).Return([]Change{}, nil)
+	mockedExecutor.On("execute", mock.Anything, mock.Anything).Return(nil)
 	ss := NewStages(mockedUpdater.update, _WaitingTask())
 	cont := t.Run("Set_and_Len", func(t *testing.T) {
 		ss.
@@ -58,7 +58,7 @@ func TestStages(t *testing.T) {
 	}
 	cont = t.Run("ExecuteNext", func(t *testing.T) {
 		for ss.HasNext() {
-			_, failed := ss.ExecuteNext(context.TODO())
+			failed := ss.ExecuteNext(context.TODO())
 			assert.False(t, failed)
 		}
 	})
@@ -75,7 +75,7 @@ func TestStages_Skipped(t *testing.T) {
 	mockedUpdater.On("update", mock.Anything, mock.Anything).Return(nil)
 	skippedExecutor := &mockExecutor{}
 	mockedExecutor := &mockExecutor{}
-	mockedExecutor.On("execute", mock.Anything, mock.Anything).Return([]Change{}, nil)
+	mockedExecutor.On("execute", mock.Anything, mock.Anything).Return(nil)
 	ss := NewStages(mockedUpdater.update, _RestartedTask()).
 		Set(ReleasesStage, skippedExecutor.execute).
 		Set(ReleaseLogsStage, skippedExecutor.execute).
@@ -86,7 +86,7 @@ func TestStages_Skipped(t *testing.T) {
 		Set(BuildVersionsStage, mockedExecutor.execute).
 		Set(CallbackStage, mockedExecutor.execute)
 	for ss.HasNext() {
-		_, failed := ss.ExecuteNext(context.TODO())
+		failed := ss.ExecuteNext(context.TODO())
 		assert.False(t, failed)
 	}
 	t.Run("Current", func(t *testing.T) { assert.Equal(t, CallbackStage, ss.Current().Name()) })

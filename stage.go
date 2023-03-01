@@ -11,7 +11,7 @@ type Stage interface {
 	Name() StageName
 	Success() Step
 	Failure() Step
-	Execute(ctx context.Context, task *Task) ([]Change, bool)
+	Execute(ctx context.Context, task *Task) bool
 }
 
 type stage struct {
@@ -34,19 +34,19 @@ func (s *stage) Failure() Step {
 }
 
 // Execute stage and return changes and whether to stop execution
-func (s *stage) Execute(ctx context.Context, task *Task) ([]Change, bool) {
+func (s *stage) Execute(ctx context.Context, task *Task) bool {
 	start := time.Now()
-	changes, err := s.execute(ctx, task)
 	task.LastStep = s.Success()
+	err := s.execute(ctx, task)
 	if err != nil {
 		task.Status = StatusFailed
 		task.LastStep = s.Failure()
 		errorDetails := err.Error()
 		task.ErrorDetails = &errorDetails
 		log.Error().Str("module", "github.com/estafette/migration").Err(err).Str("taskID", task.ID).Str("stage", string(s.Name())).Msg("stage failed")
-		return nil, true
+		return true
 	}
 	// in update query duration is appended to existing value
 	task.TotalDuration += time.Since(start)
-	return changes, false
+	return false
 }

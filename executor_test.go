@@ -26,7 +26,7 @@ func TestCallbackExecutor(t *testing.T) {
 		shouldBe.Equal(expected, string(data))
 	}))
 	defer func() { testServer.Close() }()
-	_, err := CallbackExecutor(context.TODO(), &Task{
+	err := CallbackExecutor(context.TODO(), &Task{
 		Request:       Request{ID: "test-456", FromSource: "x", FromOwner: "y", FromName: "z", ToSource: "a", ToOwner: "b", ToName: "c", CallbackURL: &testServer.URL},
 		Status:        StatusInProgress,
 		LastStep:      StepBuildVersionsDone,
@@ -43,7 +43,7 @@ func TestCallbackExecutor(t *testing.T) {
 func TestCompletedExecutor(t *testing.T) {
 	shouldBe := assert.New(t)
 	task := &Task{Status: StatusInProgress}
-	_, err := CompletedExecutor(context.TODO(), task)
+	err := CompletedExecutor(context.TODO(), task)
 	shouldBe.Nil(err)
 	shouldBe.Equal(StatusCompleted, task.Status)
 }
