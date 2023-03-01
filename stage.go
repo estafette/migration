@@ -44,9 +44,9 @@ func (s *stage) Execute(ctx context.Context, task *Task) bool {
 		errorDetails := err.Error()
 		task.ErrorDetails = &errorDetails
 		log.Error().Str("module", "github.com/estafette/migration").Err(err).Str("taskID", task.ID).Str("stage", string(s.Name())).Msg("stage failed")
-		return true
+		return false
 	}
 	// in update query duration is appended to existing value
 	task.TotalDuration += time.Since(start)
-	return false
+	return true
 }

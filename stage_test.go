@@ -34,9 +34,9 @@ func TestStage_Execute_Success(t *testing.T) {
 		execute: mockedExecutor.execute,
 	}
 	task := &Task{Request: Request{ID: "test-123"}}
-	failed := s.Execute(context.TODO(), task)
+	result := s.Execute(context.TODO(), task)
 	mockedExecutor.AssertExpectations(t)
-	shouldBe.False(failed)
+	shouldBe.True(result)
 	shouldBe.Equal(Step(0), task.LastStep)
 	shouldBe.GreaterOrEqual(task.TotalDuration, 50*time.Millisecond)
 }
@@ -53,9 +53,9 @@ func TestStage_Execute_Failure(t *testing.T) {
 		execute: mockedExecutor.execute,
 	}
 	task := &Task{Request: Request{ID: "test-123"}}
-	failed := s.Execute(context.TODO(), task)
+	result := s.Execute(context.TODO(), task)
 	mockedExecutor.AssertExpectations(t)
-	shouldBe.True(failed)
+	shouldBe.False(result)
 	shouldBe.Equal(Step(1), task.LastStep)
 	shouldBe.Equal(time.Duration(0), task.TotalDuration)
 	shouldBe.Equal(&expected, task.ErrorDetails)

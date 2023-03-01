@@ -59,7 +59,7 @@ func TestStages(t *testing.T) {
 	cont = t.Run("ExecuteNext", func(t *testing.T) {
 		for ss.HasNext() {
 			failed := ss.ExecuteNext(context.TODO())
-			assert.False(t, failed)
+			assert.True(t, failed)
 		}
 	})
 	if !cont {
@@ -87,7 +87,7 @@ func TestStages_Skipped(t *testing.T) {
 		Set(CallbackStage, mockedExecutor.execute)
 	for ss.HasNext() {
 		failed := ss.ExecuteNext(context.TODO())
-		assert.False(t, failed)
+		assert.True(t, failed)
 	}
 	t.Run("Current", func(t *testing.T) { assert.Equal(t, CallbackStage, ss.Current().Name()) })
 	mockedExecutor.AssertNumberOfCalls(t, "execute", 5)

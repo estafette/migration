@@ -42,18 +42,20 @@ func (ss *stages) Current() Stage {
 }
 
 // ExecuteNext executes the next stage, saves result to using Updater and returns the changes and if the stage failed.
-func (ss *stages) ExecuteNext(ctx context.Context) bool {
-	defer ss.updateStatus(ctx)
+func (ss *stages) ExecuteNext(ctx context.Context) (result bool) {
+	defer func() {
+		result = ss.updateStatus(ctx, result)
+	}()
 	stg := ss.Next()
 	log.Info().Str("module", "github.com/estafette/migration").Str("taskID", ss.task.ID).Str("stage", string(stg.Name())).Msg("stage started")
 	start := ss.task.TotalDuration
-	failed := stg.Execute(ctx, ss.task)
-	if failed {
+	result = stg.Execute(ctx, ss.task)
+	if !result {
 		log.Warn().Str("module", "github.com/estafette/migration").Str("taskID", ss.task.ID).Msg("task failed, stopping migration")
-		return failed
+		return result
 	}
 	log.Info().Str("module", "github.com/estafette/migration").Dur("took", ss.task.TotalDuration-start).Str("taskID", ss.task.ID).Str("stage", string(stg.Name())).Msg("stage done")
-	return failed
+	return result
 }
 
 // HasNext returns true if there is a next stage.
@@ -101,8 +103,10 @@ func (ss *stages) Set(name StageName, executor Executor) Stages {
 	return ss
 }
 
-func (ss *stages) updateStatus(ctx context.Context) {
+func (ss *stages) updateStatus(ctx context.Context, result bool) bool {
 	if err := ss.updater(ctx, ss.task); err != nil {
 		log.Error().Str("module", "github.com/estafette/migration").Err(err).Str("taskID", ss.task.ID).Msg("error updating migration status")
+		return false
 	}
+	return result
 }
