@@ -21,6 +21,13 @@ func _RestartedTask() *Task {
 		LastStep: StepBuildsFailed,
 	}
 }
+func _RestartedTask2() *Task {
+	return &Task{
+		Request:  Request{ID: "test-1", FromSource: "github.com", FromOwner: "estafette", FromName: "migration", ToSource: "github.com", ToOwner: "estafette_new", ToName: "migration_new"},
+		Status:   StatusQueued,
+		LastStep: StepBuildsDone,
+	}
+}
 
 type mockUpdater struct {
 	mock.Mock
@@ -92,5 +99,30 @@ func TestStages_Skipped(t *testing.T) {
 	t.Run("Current", func(t *testing.T) { assert.Equal(t, CallbackStage, ss.Current().Name()) })
 	mockedExecutor.AssertNumberOfCalls(t, "execute", 5)
 	mockedUpdater.AssertNumberOfCalls(t, "update", 5)
+	skippedExecutor.AssertNotCalled(t, "execute", mock.Anything, mock.Anything)
+}
+
+func TestStages_Skipped_Success(t *testing.T) {
+	mockedUpdater := &mockUpdater{}
+	mockedUpdater.On("update", mock.Anything, mock.Anything).Return(nil)
+	skippedExecutor := &mockExecutor{}
+	mockedExecutor := &mockExecutor{}
+	mockedExecutor.On("execute", mock.Anything, mock.Anything).Return(nil)
+	ss := NewStages(mockedUpdater.update, _RestartedTask2()).
+		Set(ReleasesStage, skippedExecutor.execute).
+		Set(ReleaseLogsStage, skippedExecutor.execute).
+		Set(ReleaseLogObjectsStage, skippedExecutor.execute).
+		Set(BuildsStage, mockedExecutor.execute).
+		Set(BuildLogsStage, mockedExecutor.execute).
+		Set(BuildLogObjectsStage, mockedExecutor.execute).
+		Set(BuildVersionsStage, mockedExecutor.execute).
+		Set(CallbackStage, mockedExecutor.execute)
+	for ss.HasNext() {
+		failed := ss.ExecuteNext(context.TODO())
+		assert.True(t, failed)
+	}
+	t.Run("Current", func(t *testing.T) { assert.Equal(t, CallbackStage, ss.Current().Name()) })
+	mockedExecutor.AssertNumberOfCalls(t, "execute", 4)
+	mockedUpdater.AssertNumberOfCalls(t, "update", 4)
 	skippedExecutor.AssertNotCalled(t, "execute", mock.Anything, mock.Anything)
 }

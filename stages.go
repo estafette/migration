@@ -79,7 +79,7 @@ func (ss *stages) Len() int {
 // Set the executor for the given stage name. If the stage is before Task.LastStep it will not be added.
 // Multiple calls to this function can be unordered, the stages are executed in ascending order of Step.
 func (ss *stages) Set(name StageName, executor Executor) Stages {
-	if ss.task.LastStep > name.SuccessStep() {
+	if ss.task.LastStep >= name.SuccessStep() {
 		log.Info().Str("module", "github.com/estafette/migration").Msgf("not adding stage %s", name)
 		return ss
 	}
