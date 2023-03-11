@@ -27,7 +27,7 @@ func TestNewClient(t *testing.T) {
 	shouldBe.Equal("http://localhost:80", c.(*client).serverURL)
 }
 
-func TestClient_QueueMigration_Success(t *testing.T) {
+func TestClient_Queue_Success(t *testing.T) {
 	mockedClient := &mockClient{}
 	c := &client{
 		httpClient: mockedClient,
@@ -48,9 +48,9 @@ func TestClient_QueueMigration_Success(t *testing.T) {
 		Once()
 	shouldBe := assert.New(t)
 	req := Request{FromSource: "github.com", FromOwner: "estafette", FromName: "migration", ToSource: "github.com", ToOwner: "estafette_new", ToName: "migration_new"}
-	_, err := c.QueueMigration(req)
+	_, err := c.Queue(req)
 	shouldBe.Nil(err)
-	task, err := c.QueueMigration(req)
+	task, err := c.Queue(req)
 	if shouldBe.Nil(err) {
 		shouldBe.Equal(&Task{
 			Request:  Request{ID: "test-1", FromSource: "github.com", FromOwner: "estafette", FromName: "migration", ToSource: "github.com", ToOwner: "estafette_new", ToName: "migration_new"},
@@ -69,7 +69,7 @@ func TestClient_QueueMigration_Success(t *testing.T) {
 	}
 }
 
-func TestClient_QueueMigration_Failure(t *testing.T) {
+func TestClient_Queue_Failure(t *testing.T) {
 	mockedClient := &mockClient{}
 	c := &client{
 		httpClient: mockedClient,
@@ -85,12 +85,12 @@ func TestClient_QueueMigration_Failure(t *testing.T) {
 		Once()
 	shouldBe := assert.New(t)
 	req := Request{FromSource: "github.com", FromOwner: "estafette", FromName: "migration", ToSource: "github.com", ToOwner: "estafette_new", ToName: "migration_new"}
-	task, err := c.QueueMigration(req)
+	task, err := c.Queue(req)
 	shouldBe.Nil(task)
-	shouldBe.Equal(fmt.Errorf("QueueMigration api: %w", fmt.Errorf(`responded with status: 404 Not Found, body: {"code":404,"message":"Pipeline not found"}`)), err)
+	shouldBe.Equal(fmt.Errorf("queue api: %w", fmt.Errorf(`responded with status: 404 Not Found, body: {"code":404,"message":"Pipeline not found"}`)), err)
 }
 
-func TestClient_GetMigrationStatus_Success(t *testing.T) {
+func TestClient_GetStatus_Success(t *testing.T) {
 	mockedClient := &mockClient{}
 	c := &client{
 		httpClient: mockedClient,
@@ -106,7 +106,7 @@ func TestClient_GetMigrationStatus_Success(t *testing.T) {
 		Return(&http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"id":"test-123","fromSource":"github.com","fromOwner":"estafette","fromName":"migration","toSource":"github.com","toOwner":"estafette_new","toName":"migration_new","status":"in_progress","lastStep":"releases_done"}`))}, nil).
 		Once()
 	shouldBe := assert.New(t)
-	task, err := c.GetMigrationStatus("test-123")
+	task, err := c.GetStatus("test-123")
 	if shouldBe.Nil(err) {
 		shouldBe.Equal(&Task{
 			Request:  Request{ID: "test-123", FromSource: "github.com", FromOwner: "estafette", FromName: "migration", ToSource: "github.com", ToOwner: "estafette_new", ToName: "migration_new"},
@@ -123,7 +123,7 @@ func TestClient_GetMigrationStatus_Success(t *testing.T) {
 	}
 }
 
-func TestClient_GetMigrationStatus_Failure(t *testing.T) {
+func TestClient_GetStatus_Failure(t *testing.T) {
 	mockedClient := &mockClient{}
 	c := &client{
 		httpClient: mockedClient,
@@ -138,9 +138,64 @@ func TestClient_GetMigrationStatus_Failure(t *testing.T) {
 		Return(&http.Response{Status: "404 Not Found", StatusCode: 404, Body: io.NopCloser(strings.NewReader(`{"code":404,"message":"migration task not found"}`))}, nil).
 		Once()
 	shouldBe := assert.New(t)
-	task, err := c.GetMigrationStatus("test-123")
+	task, err := c.GetStatus("test-123")
 	shouldBe.Nil(task)
-	shouldBe.Equal(fmt.Errorf("GetMigrationStatus api: %w", fmt.Errorf(`responded with status: 404 Not Found, body: {"code":404,"message":"migration task not found"}`)), err)
+	shouldBe.Equal(fmt.Errorf("getStatus api: %w", fmt.Errorf(`responded with status: 404 Not Found, body: {"code":404,"message":"migration task not found"}`)), err)
+}
+
+func TestClient_Rollback_Success(t *testing.T) {
+	mockedClient := &mockClient{}
+	c := &client{
+		httpClient: mockedClient,
+		bearerAuth: bearerAuth{
+			clientID:     "test-clientID",
+			clientSecret: "test-clientSecret",
+		},
+		serverURL: "http://localhost:80",
+	}
+	mockAuth(mockedClient).Once()
+	mockedClient.
+		On("Do", mock.Anything).
+		Return(&http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"releases": 10,"releaseLogs": 11,"builds": 12,"buildLogs": 13,"buildVersions": 14}`))}, nil).
+		Once()
+	shouldBe := assert.New(t)
+	changes, err := c.Rollback("test-123")
+	if shouldBe.Nil(err) {
+		shouldBe.Equal(&Changes{
+			Releases:      10,
+			ReleaseLogs:   11,
+			Builds:        12,
+			BuildLogs:     13,
+			BuildVersions: 14,
+		}, changes)
+	}
+	if mockedClient.AssertExpectations(t) {
+		migrationReq := mockedClient.Calls[1].Arguments[0].(*http.Request)
+		shouldBe.NotNil(migrationReq)
+		shouldBe.Equal("DELETE", migrationReq.Method)
+		shouldBe.Equal("http://localhost:80/api/migrate/test-123", migrationReq.URL.String())
+		shouldBe.Nil(migrationReq.Body)
+	}
+}
+
+func TestClient_Rollback_Failure(t *testing.T) {
+	mockedClient := &mockClient{}
+	c := &client{
+		httpClient: mockedClient,
+		bearerAuth: bearerAuth{
+			clientID:     "test-clientID",
+			clientSecret: "test-clientSecret",
+		},
+		serverURL: "http://localhost:80",
+	}
+	mockAuth(mockedClient).Once()
+	mockedClient.On("Do", mock.Anything).
+		Return(&http.Response{Status: "404 Not Found", StatusCode: 404, Body: io.NopCloser(strings.NewReader(`{"code":404,"message":"migration task not found"}`))}, nil).
+		Once()
+	shouldBe := assert.New(t)
+	changes, err := c.Rollback("test-123")
+	shouldBe.Nil(changes)
+	shouldBe.Equal(fmt.Errorf("rollback api: %w", fmt.Errorf(`responded with status: 404 Not Found, body: {"code":404,"message":"migration task not found"}`)), err)
 }
 
 func mockAuth(mockedClient *mockClient) *mock.Call {

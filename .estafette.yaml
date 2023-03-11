@@ -10,8 +10,8 @@ labels:
 version:
   semver:
     major: 0
-    minor: 5
-    patch: 2
+    minor: 6
+    patch: 0
     releaseBranch: main
 
 stages:
