@@ -24,8 +24,10 @@ const (
 	StepBuildLogObjectsDone     Step = 62
 	StepBuildVersionsFailed     Step = 71
 	StepBuildVersionsDone       Step = 72
-	StepCallbackFailed          Step = 81
-	StepCallbackDone            Step = 82
+	StepComputedTablesFailed    Step = 81
+	StepComputedTablesDone      Step = 82
+	StepCallbackFailed          Step = 91
+	StepCallbackDone            Step = 92
 	StepCompletionFailed        Step = 991
 	StepCompletionDone          Step = 992
 )
@@ -95,6 +97,10 @@ func (s *Step) String() string {
 		return "build_versions_failed"
 	case StepBuildVersionsDone:
 		return "build_versions_done"
+	case StepComputedTablesFailed:
+		return "computed_tables_failed"
+	case StepComputedTablesDone:
+		return "computed_tables_done"
 	case StepCallbackFailed:
 		return "callback_failed"
 	case StepCallbackDone:
@@ -140,6 +146,10 @@ func StepFrom(str string) Step {
 		return StepBuildVersionsFailed
 	case "build_versions_done":
 		return StepBuildVersionsDone
+	case "computed_tables_failed":
+		return StepComputedTablesFailed
+	case "computed_tables_done":
+		return StepComputedTablesDone
 	case "callback_failed":
 		return StepCallbackFailed
 	case "callback_done":
