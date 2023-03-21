@@ -25,8 +25,10 @@ var (
 // Client for the estafette-ci-api migration API
 type Client interface {
 	Queue(request Request) (*Task, error)
-	GetStatus(taskID string) (*Task, error)
-	Rollback(taskID string) (*Changes, error)
+	GetMigrationByID(taskID string) (*Task, error)
+	RollbackMigration(taskID string) (*Changes, error)
+	GetMigrations() ([]*Task, error)
+	GetMigrationByFromRepo(source, owner, name string) (*Task, error)
 }
 
 type bearerAuth struct {
@@ -144,7 +146,7 @@ func (c *client) Queue(request Request) (*Task, error) {
 	if request.CallbackURL != nil && *request.CallbackURL == "" {
 		request.CallbackURL = nil
 	}
-	res, err := c.httpPost("/api/migrate", request)
+	res, err := c.httpPost("/api/migration", request)
 	if err != nil {
 		return nil, fmt.Errorf("queue api: error while executing request: %w", err)
 	}
@@ -160,16 +162,16 @@ func (c *client) Queue(request Request) (*Task, error) {
 	return task, nil
 }
 
-// GetStatus of migration task using task ID
-func (c *client) GetStatus(taskID string) (*Task, error) {
-	res, err := c.httpGet(_urlJoin("/api/migrate", taskID), nil)
+// GetMigrationByID of migration task using task ID
+func (c *client) GetMigrationByID(taskID string) (*Task, error) {
+	res, err := c.httpGet(_urlJoin("/api/migration", taskID), nil)
 	if err != nil {
-		return nil, fmt.Errorf("getStatus api: error while executing request: %w", err)
+		return nil, fmt.Errorf("getMigrationByID api: error while executing request: %w", err)
 	}
 	var body []byte
 	body, err = _successful(res)
 	if err != nil {
-		return nil, fmt.Errorf("getStatus api: %w", err)
+		return nil, fmt.Errorf("getMigrationByID api: %w", err)
 	}
 	task := &Task{}
 	if err = json.Unmarshal(body, task); err != nil {
@@ -178,20 +180,55 @@ func (c *client) GetStatus(taskID string) (*Task, error) {
 	return task, nil
 }
 
-// Rollback task in estafette.
-func (c *client) Rollback(taskID string) (*Changes, error) {
-	res, err := c.httpDelete(_urlJoin("/api/migrate", taskID), nil)
+// RollbackMigration task in estafette.
+func (c *client) RollbackMigration(taskID string) (*Changes, error) {
+	res, err := c.httpDelete(_urlJoin("/api/migration", taskID), nil)
 	if err != nil {
-		return nil, fmt.Errorf("rollback api: error while executing request: %w", err)
+		return nil, fmt.Errorf("rollbackMigration api: error while executing request: %w", err)
 	}
 	var body []byte
 	body, err = _successful(res)
 	if err != nil {
-		return nil, fmt.Errorf("rollback api: %w", err)
+		return nil, fmt.Errorf("rollbackMigration api: %w", err)
 	}
 	changes := &Changes{}
 	if err = json.Unmarshal(body, changes); err != nil {
-		return nil, fmt.Errorf("rollback api: error while unmarshalling response: %w", err)
+		return nil, fmt.Errorf("rollbackMigration api: error while unmarshalling response: %w", err)
 	}
 	return changes, nil
+}
+
+// GetMigrationByFromRepo of migration task using task ID
+func (c *client) GetMigrationByFromRepo(source, owner, name string) (*Task, error) {
+	res, err := c.httpGet(_urlJoin("/api/migration/from", source, owner, name), nil)
+	if err != nil {
+		return nil, fmt.Errorf("getMigrationByFromRepo api: error while executing request: %w", err)
+	}
+	var body []byte
+	body, err = _successful(res)
+	if err != nil {
+		return nil, fmt.Errorf("getMigrationByFromRepo api: %w", err)
+	}
+	task := &Task{}
+	if err = json.Unmarshal(body, task); err != nil {
+		return nil, fmt.Errorf("getStatus api: error while unmarshalling response: %w", err)
+	}
+	return task, nil
+}
+
+func (c *client) GetMigrations() ([]*Task, error) {
+	res, err := c.httpGet("/api/migration", nil)
+	if err != nil {
+		return nil, fmt.Errorf("getMigrations api: error while executing request: %w", err)
+	}
+	var body []byte
+	body, err = _successful(res)
+	if err != nil {
+		return nil, fmt.Errorf("getMigrations api: %w", err)
+	}
+	tasks := make([]*Task, 0)
+	if err = json.Unmarshal(body, &tasks); err != nil {
+		return nil, fmt.Errorf("getMigrations api: error while unmarshalling response: %w", err)
+	}
+	return tasks, nil
 }
