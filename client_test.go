@@ -62,7 +62,7 @@ func TestClient_Queue_Success(t *testing.T) {
 		migrationReq := mockedClient.Calls[1].Arguments[0].(*http.Request)
 		shouldBe.NotNil(migrationReq)
 		shouldBe.Equal("POST", migrationReq.Method)
-		shouldBe.Equal("http://localhost:80/api/migration", migrationReq.URL.String())
+		shouldBe.Equal("http://localhost:80/api/migrations", migrationReq.URL.String())
 		data, err := io.ReadAll(migrationReq.Body)
 		shouldBe.Nil(err)
 		shouldBe.Equal(`{"fromSource":"github.com","fromOwner":"estafette","fromName":"migration","toSource":"github.com","toOwner":"estafette_new","toName":"migration_new"}`, string(data))
@@ -118,7 +118,7 @@ func TestClient_GetMigrationByID_Success(t *testing.T) {
 		migrationReq := mockedClient.Calls[1].Arguments[0].(*http.Request)
 		shouldBe.NotNil(migrationReq)
 		shouldBe.Equal("GET", migrationReq.Method)
-		shouldBe.Equal("http://localhost:80/api/migration/test-123", migrationReq.URL.String())
+		shouldBe.Equal("http://localhost:80/api/migrations/test-123", migrationReq.URL.String())
 		shouldBe.Nil(migrationReq.Body)
 	}
 }
@@ -171,7 +171,7 @@ func TestClient_GetMigrationByFromRepo_Success(t *testing.T) {
 		migrationReq := mockedClient.Calls[1].Arguments[0].(*http.Request)
 		shouldBe.NotNil(migrationReq)
 		shouldBe.Equal("GET", migrationReq.Method)
-		shouldBe.Equal("http://localhost:80/api/migration/from/github.com/estafette/migration", migrationReq.URL.String())
+		shouldBe.Equal("http://localhost:80/api/migrations/from/github.com/estafette/migration", migrationReq.URL.String())
 		shouldBe.Nil(migrationReq.Body)
 	}
 }
@@ -226,7 +226,7 @@ func TestClient_Rollback_Success(t *testing.T) {
 		migrationReq := mockedClient.Calls[1].Arguments[0].(*http.Request)
 		shouldBe.NotNil(migrationReq)
 		shouldBe.Equal("DELETE", migrationReq.Method)
-		shouldBe.Equal("http://localhost:80/api/migration/test-123", migrationReq.URL.String())
+		shouldBe.Equal("http://localhost:80/api/migrations/test-123", migrationReq.URL.String())
 		shouldBe.Nil(migrationReq.Body)
 	}
 }
@@ -288,7 +288,7 @@ func TestClient_GetMigrations_Success(t *testing.T) {
 		migrationReq := mockedClient.Calls[1].Arguments[0].(*http.Request)
 		shouldBe.NotNil(migrationReq)
 		shouldBe.Equal("GET", migrationReq.Method)
-		shouldBe.Equal("http://localhost:80/api/migration", migrationReq.URL.String())
+		shouldBe.Equal("http://localhost:80/api/migrations", migrationReq.URL.String())
 		shouldBe.Nil(migrationReq.Body)
 	}
 }

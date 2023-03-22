@@ -16,6 +16,7 @@ const (
 	requestTimeout = 60 * time.Second
 	// tokenTimeout based on https://github.com/estafette/estafette-ci-api/blob/main/pkg/api/middleware.go#L68
 	tokenTimeout = 175 * time.Minute
+	migrationAPI = "/api/migrations"
 )
 
 var (
@@ -146,7 +147,7 @@ func (c *client) Queue(request Request) (*Task, error) {
 	if request.CallbackURL != nil && *request.CallbackURL == "" {
 		request.CallbackURL = nil
 	}
-	res, err := c.httpPost("/api/migration", request)
+	res, err := c.httpPost(migrationAPI, request)
 	if err != nil {
 		return nil, fmt.Errorf("queue api: error while executing request: %w", err)
 	}
@@ -164,7 +165,7 @@ func (c *client) Queue(request Request) (*Task, error) {
 
 // GetMigrationByID of migration task using task ID
 func (c *client) GetMigrationByID(taskID string) (*Task, error) {
-	res, err := c.httpGet(_urlJoin("/api/migration", taskID), nil)
+	res, err := c.httpGet(_urlJoin(migrationAPI, taskID), nil)
 	if err != nil {
 		return nil, fmt.Errorf("getMigrationByID api: error while executing request: %w", err)
 	}
@@ -182,7 +183,7 @@ func (c *client) GetMigrationByID(taskID string) (*Task, error) {
 
 // RollbackMigration task in estafette.
 func (c *client) RollbackMigration(taskID string) (*Changes, error) {
-	res, err := c.httpDelete(_urlJoin("/api/migration", taskID), nil)
+	res, err := c.httpDelete(_urlJoin(migrationAPI, taskID), nil)
 	if err != nil {
 		return nil, fmt.Errorf("rollbackMigration api: error while executing request: %w", err)
 	}
@@ -200,7 +201,7 @@ func (c *client) RollbackMigration(taskID string) (*Changes, error) {
 
 // GetMigrationByFromRepo of migration task using task ID
 func (c *client) GetMigrationByFromRepo(source, owner, name string) (*Task, error) {
-	res, err := c.httpGet(_urlJoin("/api/migration/from", source, owner, name), nil)
+	res, err := c.httpGet(_urlJoin(migrationAPI, "from", source, owner, name), nil)
 	if err != nil {
 		return nil, fmt.Errorf("getMigrationByFromRepo api: error while executing request: %w", err)
 	}
@@ -217,7 +218,7 @@ func (c *client) GetMigrationByFromRepo(source, owner, name string) (*Task, erro
 }
 
 func (c *client) GetMigrations() ([]*Task, error) {
-	res, err := c.httpGet("/api/migration", nil)
+	res, err := c.httpGet(migrationAPI, nil)
 	if err != nil {
 		return nil, fmt.Errorf("getMigrations api: error while executing request: %w", err)
 	}
