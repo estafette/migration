@@ -306,10 +306,10 @@ func TestClient_GetPipelineBuildStatus_Success(t *testing.T) {
 	mockAuth(mockedClient).Once()
 	mockedClient.
 		On("Do", mock.Anything).
-		Return(&http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`[{"repoBranch":"master","buildStatus":"succeeded"}]`))}, nil).
+		Return(&http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"items":[{"repoSource":"github.com","repoOwner":"xivart","repoName":"scm-migrator-test1","repoBranch":"scm-migrator","buildVersion":"0.0.2-scm-migrator","buildStatus":"succeeded"}],"pagination":{"page":1,"size":20,"totalPages":1,"totalItems":3}}`))}, nil).
 		Once()
 	shouldBe := assert.New(t)
-	status, err := c.GetPipelineBuildStatus("github.com", "estafette", "estafette-ci-api", "master")
+	status, err := c.GetPipelineBuildStatus("github.com", "xivart", "scm-migrator-test1", "scm-migrator")
 	if shouldBe.Nil(err) {
 		shouldBe.Equal("succeeded", status)
 	}
@@ -317,7 +317,7 @@ func TestClient_GetPipelineBuildStatus_Success(t *testing.T) {
 		pipelineReq := mockedClient.Calls[1].Arguments[0].(*http.Request)
 		shouldBe.NotNil(pipelineReq)
 		shouldBe.Equal("GET", pipelineReq.Method)
-		shouldBe.Equal("http://localhost:80/api/pipelines/github.com/estafette/estafette-ci-api/builds", pipelineReq.URL.String())
+		shouldBe.Equal("http://localhost:80/api/pipelines/github.com/xivart/scm-migrator-test1/builds", pipelineReq.URL.String())
 		shouldBe.Nil(pipelineReq.Body)
 	}
 }

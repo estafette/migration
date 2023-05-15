@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	contracts "github.com/estafette/estafette-ci-contracts"
 	"net/http"
 	"strings"
 	"time"
@@ -249,13 +248,13 @@ func (c *client) GetPipelineBuildStatus(source, owner, name, branch string) (str
 		return "", fmt.Errorf("getPipelineStatus api: %w", err)
 	}
 
-	var builds []*contracts.Build
-	if err = json.Unmarshal(body, &builds); err != nil {
+	var pagedBuildResponse PagedBuildsResponse
+	if err = json.Unmarshal(body, &pagedBuildResponse); err != nil {
 		return "", fmt.Errorf("getPipelineStatus api: error while unmarshalling response: %w", err)
 	}
 
 	// Get the latest build for the branch
-	for _, build := range builds {
+	for _, build := range pagedBuildResponse.Items {
 		if build.RepoBranch == branch {
 			return string(build.BuildStatus), nil
 		}
