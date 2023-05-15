@@ -314,11 +314,11 @@ func TestClient_GetPipelineBuildStatus_Success(t *testing.T) {
 		shouldBe.Equal("succeeded", status)
 	}
 	if mockedClient.AssertExpectations(t) {
-		migrationReq := mockedClient.Calls[1].Arguments[0].(*http.Request)
-		shouldBe.NotNil(migrationReq)
-		shouldBe.Equal("GET", migrationReq.Method)
-		shouldBe.Equal("http://localhost:80/github.com/estafette/estafette-ci-api/builds", migrationReq.URL.String())
-		shouldBe.Nil(migrationReq.Body)
+		pipelineReq := mockedClient.Calls[1].Arguments[0].(*http.Request)
+		shouldBe.NotNil(pipelineReq)
+		shouldBe.Equal("GET", pipelineReq.Method)
+		shouldBe.Equal("http://localhost:80/api/pipelines/github.com/estafette/estafette-ci-api/builds", pipelineReq.URL.String())
+		shouldBe.Nil(pipelineReq.Body)
 	}
 }
 
