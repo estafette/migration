@@ -18,6 +18,7 @@ const (
 	// tokenTimeout based on https://github.com/estafette/estafette-ci-api/blob/main/pkg/api/middleware.go#L68
 	tokenTimeout = 175 * time.Minute
 	migrationAPI = "/api/migrations"
+	pipelinesAPI = "/api/pipelines"
 )
 
 var (
@@ -238,7 +239,7 @@ func (c *client) GetMigrations() ([]*Task, error) {
 
 // GetPipelineBuildStatus of pipeline using source, owner and name
 func (c *client) GetPipelineBuildStatus(source, owner, name, branch string) (string, error) {
-	res, err := c.httpGet(_urlJoin(source, owner, name, "builds"), nil)
+	res, err := c.httpGet(_urlJoin(pipelinesAPI, source, owner, name, "builds"), nil)
 	if err != nil {
 		return "", fmt.Errorf("getPipelineStatus api: error while executing request: %w", err)
 	}
