@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	contracts "github.com/estafette/estafette-ci-contracts"
 	"net/http"
 	"strings"
 	"time"
@@ -30,6 +31,7 @@ type Client interface {
 	RollbackMigration(taskID string) (*Changes, error)
 	GetMigrations() ([]*Task, error)
 	GetMigrationByFromRepo(source, owner, name string) (*Task, error)
+	GetPipelineBuildStatus(source, owner, name, branch string) (string, error)
 }
 
 type bearerAuth struct {
@@ -232,4 +234,30 @@ func (c *client) GetMigrations() ([]*Task, error) {
 		return nil, fmt.Errorf("getMigrations api: error while unmarshalling response: %w", err)
 	}
 	return tasks, nil
+}
+
+// GetPipelineBuildStatus of pipeline using source, owner and name
+func (c *client) GetPipelineBuildStatus(source, owner, name, branch string) (string, error) {
+	res, err := c.httpGet(_urlJoin(source, owner, name, "builds"), nil)
+	if err != nil {
+		return "", fmt.Errorf("getPipelineStatus api: error while executing request: %w", err)
+	}
+	var body []byte
+	body, err = _successful(res)
+	if err != nil {
+		return "", fmt.Errorf("getPipelineStatus api: %w", err)
+	}
+
+	var builds []*contracts.Build
+	if err = json.Unmarshal(body, &builds); err != nil {
+		return "", fmt.Errorf("getPipelineStatus api: error while unmarshalling response: %w", err)
+	}
+
+	// Get the latest build for the branch
+	for _, build := range builds {
+		if build.RepoBranch == branch {
+			return string(build.BuildStatus), nil
+		}
+	}
+	return "", nil
 }

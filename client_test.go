@@ -293,6 +293,35 @@ func TestClient_GetMigrations_Success(t *testing.T) {
 	}
 }
 
+func TestClient_GetPipelineBuildStatus_Success(t *testing.T) {
+	mockedClient := &mockClient{}
+	c := &client{
+		httpClient: mockedClient,
+		bearerAuth: bearerAuth{
+			clientID:     "test-clientID",
+			clientSecret: "test-clientSecret",
+		},
+		serverURL: "http://localhost:80",
+	}
+	mockAuth(mockedClient).Once()
+	mockedClient.
+		On("Do", mock.Anything).
+		Return(&http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`[{"repoBranch":"master","buildStatus":"succeeded"}]`))}, nil).
+		Once()
+	shouldBe := assert.New(t)
+	status, err := c.GetPipelineBuildStatus("github.com", "estafette", "estafette-ci-api", "master")
+	if shouldBe.Nil(err) {
+		shouldBe.Equal("succeeded", status)
+	}
+	if mockedClient.AssertExpectations(t) {
+		migrationReq := mockedClient.Calls[1].Arguments[0].(*http.Request)
+		shouldBe.NotNil(migrationReq)
+		shouldBe.Equal("GET", migrationReq.Method)
+		shouldBe.Equal("http://localhost:80/github.com/estafette/estafette-ci-api/builds", migrationReq.URL.String())
+		shouldBe.Nil(migrationReq.Body)
+	}
+}
+
 func mockAuth(mockedClient *mockClient) *mock.Call {
 	return mockedClient.On("Do", mock.MatchedBy(func(req *http.Request) bool {
 		return req.URL.String() == "http://localhost:80/api/auth/client/login"
