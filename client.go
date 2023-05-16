@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -31,7 +32,7 @@ type Client interface {
 	RollbackMigration(taskID string) (*Changes, error)
 	GetMigrations() ([]*Task, error)
 	GetMigrationByFromRepo(source, owner, name string) (*Task, error)
-	GetPipelineBuildStatus(source, owner, name, branch string) (string, error)
+	GetPipelineBuildStatus(source, owner, name, branch, revisionID string) (string, error)
 }
 
 type bearerAuth struct {
@@ -237,8 +238,12 @@ func (c *client) GetMigrations() ([]*Task, error) {
 }
 
 // GetPipelineBuildStatus of pipeline using source, owner and name
-func (c *client) GetPipelineBuildStatus(source, owner, name, branch string) (string, error) {
-	res, err := c.httpGet(_urlJoin(pipelinesAPI, source, owner, name, "builds"), nil)
+func (c *client) GetPipelineBuildStatus(source, owner, name, branch, revisionID string) (string, error) {
+	url := _urlJoin(pipelinesAPI, source, owner, name, "builds")
+	if revisionID != "" {
+		url = _urlJoin(url, revisionID)
+	}
+	res, err := c.httpGet(url, nil)
 	if err != nil {
 		return "", fmt.Errorf("getPipelineStatus api: error while executing request: %w", err)
 	}
@@ -252,6 +257,11 @@ func (c *client) GetPipelineBuildStatus(source, owner, name, branch string) (str
 	if err = json.Unmarshal(body, &pagedBuildResponse); err != nil {
 		return "", fmt.Errorf("getPipelineStatus api: error while unmarshalling response: %w", err)
 	}
+
+	// Sort builds by creation time in descending order
+	sort.Slice(pagedBuildResponse.Items, func(i, j int) bool {
+		return pagedBuildResponse.Items[j].StartedAt.Sub(*pagedBuildResponse.Items[i].StartedAt) > 0
+	})
 
 	// Get the latest build for the branch
 	for _, build := range pagedBuildResponse.Items {

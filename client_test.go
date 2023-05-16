@@ -309,7 +309,7 @@ func TestClient_GetPipelineBuildStatus_Success(t *testing.T) {
 		Return(&http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"items":[{"repoSource":"github.com","repoOwner":"xivart","repoName":"scm-migrator-test1","repoBranch":"scm-migrator","buildVersion":"0.0.2-scm-migrator","buildStatus":"succeeded"}],"pagination":{"page":1,"size":20,"totalPages":1,"totalItems":3}}`))}, nil).
 		Once()
 	shouldBe := assert.New(t)
-	status, err := c.GetPipelineBuildStatus("github.com", "xivart", "scm-migrator-test1", "scm-migrator")
+	status, err := c.GetPipelineBuildStatus("github.com", "xivart", "scm-migrator-test1", "scm-migrator", "")
 	if shouldBe.Nil(err) {
 		shouldBe.Equal("succeeded", status)
 	}
