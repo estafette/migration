@@ -260,7 +260,7 @@ func (c *client) GetPipelineBuildStatus(source, owner, name, branch, revisionID 
 
 	// Sort builds by creation time in descending order
 	sort.Slice(pagedBuildResponse.Items, func(i, j int) bool {
-		return pagedBuildResponse.Items[j].StartedAt.Sub(*pagedBuildResponse.Items[i].StartedAt) > 0
+		return pagedBuildResponse.Items[i].StartedAt.After(*pagedBuildResponse.Items[j].StartedAt)
 	})
 
 	// Get the latest build for the branch
