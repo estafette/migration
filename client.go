@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	contracts "github.com/estafette/estafette-ci-contracts"
 	"net/http"
 	"sort"
 	"strings"
@@ -237,24 +238,32 @@ func (c *client) GetMigrations() ([]*Task, error) {
 	return tasks, nil
 }
 
-// GetPipelineBuildStatus of pipeline using source, owner and name
 func (c *client) GetPipelineBuildStatus(source, owner, name, branch, revisionID string) (string, error) {
 	url := _urlJoin(pipelinesAPI, source, owner, name, "builds")
 	if revisionID != "" {
 		url = _urlJoin(url, revisionID)
 	}
+
 	res, err := c.httpGet(url, nil)
 	if err != nil {
 		return "", fmt.Errorf("getPipelineStatus api: error while executing request: %w", err)
 	}
-	var body []byte
-	body, err = _successful(res)
+
+	body, err := _successful(res)
 	if err != nil {
 		return "", fmt.Errorf("getPipelineStatus api: %w", err)
 	}
 
+	if revisionID != "" {
+		var buildResponse *contracts.Build
+		if err := json.Unmarshal(body, &buildResponse); err != nil {
+			return "", fmt.Errorf("getPipelineStatus api: error while unmarshalling response: %w", err)
+		}
+		return string(buildResponse.BuildStatus), nil
+	}
+
 	var pagedBuildResponse PagedBuildsResponse
-	if err = json.Unmarshal(body, &pagedBuildResponse); err != nil {
+	if err := json.Unmarshal(body, &pagedBuildResponse); err != nil {
 		return "", fmt.Errorf("getPipelineStatus api: error while unmarshalling response: %w", err)
 	}
 
@@ -269,5 +278,6 @@ func (c *client) GetPipelineBuildStatus(source, owner, name, branch, revisionID 
 			return string(build.BuildStatus), nil
 		}
 	}
+
 	return "", nil
 }
