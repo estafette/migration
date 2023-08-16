@@ -251,6 +251,78 @@ func TestClient_Rollback_Failure(t *testing.T) {
 	shouldBe.Equal(fmt.Errorf("rollbackMigration api: %w", fmt.Errorf(`responded with status: 404 Not Found, body: {"code":404,"message":"migration task not found"}`)), err)
 }
 
+func TestClient_archival(t *testing.T) {
+	mockedClient := &mockClient{}
+	c := &client{
+		httpClient: mockedClient,
+		bearerAuth: bearerAuth{
+			clientID:     "test-clientID",
+			clientSecret: "test-clientSecret",
+		},
+		serverURL: "http://localhost:80",
+	}
+	mockAuth(mockedClient).Once()
+	tests := []struct {
+		do     func(source string, owner string, repo string) error
+		err    error
+		hasErr bool
+		name   string
+		resp   *http.Response
+		url    string
+	}{
+		{
+			name:   "UnArchivePipeline_success",
+			url:    "/api/migrations/from/github.com/estafette/migration/unarchive",
+			do:     c.UnArchivePipeline,
+			hasErr: false,
+			resp:   &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"archived": false}`))},
+		},
+		{
+			name:   "UnArchivePipeline_failure",
+			url:    "/api/migrations/from/github.com/estafette/migration/unarchive",
+			do:     c.UnArchivePipeline,
+			resp:   &http.Response{Status: "404 Not Found", StatusCode: 404, Body: io.NopCloser(strings.NewReader(`{"code":404,"message":"pipeline not found"}`))},
+			hasErr: true,
+			err:    fmt.Errorf("pipelineArchival api: %w", fmt.Errorf(`responded with status: 404 Not Found, body: {"code":404,"message":"pipeline not found"}`)),
+		},
+		{
+			name:   "ArchivePipeline_success",
+			url:    "/api/migrations/from/github.com/estafette/migration/archive",
+			do:     c.ArchivePipeline,
+			hasErr: false,
+			resp:   &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"archived": true}`))},
+		},
+		{
+			name:   "ArchivePipeline_failure",
+			url:    "/api/migrations/from/github.com/estafette/migration/archive",
+			do:     c.ArchivePipeline,
+			resp:   &http.Response{Status: "404 Not Found", StatusCode: 404, Body: io.NopCloser(strings.NewReader(`{"code":404,"message":"pipeline not found"}`))},
+			hasErr: true,
+			err:    fmt.Errorf("pipelineArchival api: %w", fmt.Errorf(`responded with status: 404 Not Found, body: {"code":404,"message":"pipeline not found"}`)),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockedClient.
+				On("Do", mock.AnythingOfType("*http.Request")).
+				Return(tt.resp, nil).
+				Once()
+			shouldBe := assert.New(t)
+			err := tt.do("github.com", "estafette", "migration")
+			if tt.hasErr {
+				shouldBe.NotNil(err)
+				shouldBe.Equal(tt.err, err)
+			} else {
+				shouldBe.Nil(err)
+			}
+			requestMatcher := mock.MatchedBy(func(migrationReq *http.Request) bool {
+				return migrationReq.Body == nil && migrationReq.Method == "PUT" && migrationReq.URL.String() == "http://localhost:80"+tt.url
+			})
+			mockedClient.AssertCalled(t, "Do", requestMatcher)
+		})
+	}
+}
+
 func TestClient_GetMigrations_Success(t *testing.T) {
 	mockedClient := &mockClient{}
 	c := &client{

@@ -28,12 +28,22 @@ var (
 
 // Client for the estafette-ci-api migration API
 type Client interface {
+	// Queue task in estafette. If the ID of the task is not provided,
+	// it will be generated in Estafette server else existing task is updated
 	Queue(request Request) (*Task, error)
+	// GetMigrationByID of migration task using task ID
 	GetMigrationByID(taskID string) (*Task, error)
+	// RollbackMigration task in estafette.
 	RollbackMigration(taskID string) (*Changes, error)
+	// GetMigrations returns all migration tasks
 	GetMigrations() ([]*Task, error)
+	// GetMigrationByFromRepo of migration task using task ID
 	GetMigrationByFromRepo(source, owner, name string) (*Task, error)
 	GetPipelineBuildStatus(source, owner, name, branch, revisionID string) (string, error)
+	// UnArchivePipeline un-archives the pipeline
+	UnArchivePipeline(source, owner, repo string) error
+	// ArchivePipeline archives the pipeline
+	ArchivePipeline(source, owner, repo string) error
 }
 
 type bearerAuth struct {
@@ -74,14 +84,19 @@ func NewClient(serverURL, clientID, clientSecret string) Client {
 	}
 }
 
+// httpGet request for the given api endpoint with optional body
+func (c *client) httpGet(api string, body any) (*http.Response, error) {
+	return c.request("GET", _urlJoin(c.serverURL, api), body)
+}
+
 // httpPost request for the given api endpoint with optional body
 func (c *client) httpPost(api string, body any) (*http.Response, error) {
 	return c.request("POST", _urlJoin(c.serverURL, api), body)
 }
 
-// httpGet request for the given api endpoint with optional body
-func (c *client) httpGet(api string, body any) (*http.Response, error) {
-	return c.request("GET", _urlJoin(c.serverURL, api), body)
+// httpPut request for the given api endpoint with optional body
+func (c *client) httpPut(join string, t interface{}) (*http.Response, error) {
+	return c.request("PUT", _urlJoin(c.serverURL, join), t)
 }
 
 // httpDelete request for the given api endpoint with optional body
@@ -145,8 +160,6 @@ func (c *client) authenticate() error {
 	return nil
 }
 
-// Queue task in estafette. If the ID of the task is not provided,
-// it will be generated in Estafette server else existing task is updated
 func (c *client) Queue(request Request) (*Task, error) {
 	if request.CallbackURL != nil && *request.CallbackURL == "" {
 		request.CallbackURL = nil
@@ -167,7 +180,6 @@ func (c *client) Queue(request Request) (*Task, error) {
 	return task, nil
 }
 
-// GetMigrationByID of migration task using task ID
 func (c *client) GetMigrationByID(taskID string) (*Task, error) {
 	res, err := c.httpGet(_urlJoin(migrationAPI, taskID), nil)
 	if err != nil {
@@ -185,7 +197,6 @@ func (c *client) GetMigrationByID(taskID string) (*Task, error) {
 	return task, nil
 }
 
-// RollbackMigration task in estafette.
 func (c *client) RollbackMigration(taskID string) (*Changes, error) {
 	res, err := c.httpDelete(_urlJoin(migrationAPI, taskID), nil)
 	if err != nil {
@@ -203,7 +214,6 @@ func (c *client) RollbackMigration(taskID string) (*Changes, error) {
 	return changes, nil
 }
 
-// GetMigrationByFromRepo of migration task using task ID
 func (c *client) GetMigrationByFromRepo(source, owner, name string) (*Task, error) {
 	res, err := c.httpGet(_urlJoin(migrationAPI, "from", source, owner, name), nil)
 	if err != nil {
@@ -280,4 +290,35 @@ func (c *client) GetPipelineBuildStatus(source, owner, name, branch, revisionID 
 	}
 
 	return "", nil
+}
+
+func (c *client) UnArchivePipeline(source, owner, repo string) error {
+	return c.doArchivalPipeline(source, owner, repo, false)
+}
+
+func (c *client) ArchivePipeline(source, owner, repo string) error {
+	return c.doArchivalPipeline(source, owner, repo, true)
+}
+
+func (c *client) doArchivalPipeline(source, owner, repo string, archived bool) error {
+	url := fmt.Sprintf("/from/%s/%s/%s", source, owner, repo)
+	if archived {
+		url = fmt.Sprintf("%s/archive", url)
+	} else {
+		url = fmt.Sprintf("%s/unarchive", url)
+	}
+	res, err := c.httpPut(_urlJoin(migrationAPI, url), nil)
+	if err != nil {
+		return fmt.Errorf("pipelineArchival api: error while executing request: %w", err)
+	}
+	var body []byte
+	body, err = _successful(res)
+	if err != nil {
+		return fmt.Errorf("pipelineArchival api: %w", err)
+	}
+	changes := &Changes{}
+	if err = json.Unmarshal(body, changes); err != nil {
+		return fmt.Errorf("pipelineArchival api: error while unmarshalling response: %w", err)
+	}
+	return nil
 }
