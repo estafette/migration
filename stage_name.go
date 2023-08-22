@@ -11,6 +11,7 @@ const (
 	BuildLogObjectsStage   StageName = "build_log_objects"
 	BuildVersionsStage     StageName = "build_versions"
 	ComputedTablesStage    StageName = "computed_tables"
+	WaitingUnarchiveStage  StageName = "waiting_unarchive"
 	CallbackStage          StageName = "callback"
 	CompletedStage         StageName = "completed"
 )
@@ -36,6 +37,8 @@ func (sn StageName) SuccessStep() Step {
 		return StepBuildVersionsDone
 	case ComputedTablesStage:
 		return StepComputedTablesDone
+	case WaitingUnarchiveStage:
+		return StepWaitingUnarchiveDone
 	case CallbackStage:
 		return StepCallbackDone
 	case CompletedStage: // special case considering Callback is last step
@@ -64,6 +67,8 @@ func (sn StageName) FailedStep() Step {
 		return StepBuildVersionsFailed
 	case ComputedTablesStage:
 		return StepComputedTablesFailed
+	case WaitingUnarchiveStage:
+		return StepWaitingUnarchiveFailed
 	case CallbackStage:
 		return StepCallbackFailed
 	case CompletedStage:
