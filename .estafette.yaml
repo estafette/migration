@@ -11,7 +11,7 @@ version:
   semver:
     major: 0
     minor: 8
-    patch: 7
+    patch: 8
     releaseBranch: main
 
 stages:
