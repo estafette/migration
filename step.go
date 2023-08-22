@@ -26,6 +26,8 @@ const (
 	StepBuildVersionsDone       Step = 72
 	StepComputedTablesFailed    Step = 81
 	StepComputedTablesDone      Step = 82
+	StepWaitingUnarchiveFailed  Step = 85
+	StepWaitingUnarchiveDone    Step = 86
 	StepCallbackFailed          Step = 91
 	StepCallbackDone            Step = 92
 	StepCompletionFailed        Step = 991
@@ -101,6 +103,10 @@ func (s *Step) String() string {
 		return "computed_tables_failed"
 	case StepComputedTablesDone:
 		return "computed_tables_done"
+	case StepWaitingUnarchiveFailed:
+		return "waiting_unarchive_failed"
+	case StepWaitingUnarchiveDone:
+		return "waiting_unarchive_done"
 	case StepCallbackFailed:
 		return "callback_failed"
 	case StepCallbackDone:
@@ -150,6 +156,10 @@ func StepFrom(str string) Step {
 		return StepComputedTablesFailed
 	case "computed_tables_done":
 		return StepComputedTablesDone
+	case "waiting_unarchive_failed":
+		return StepWaitingUnarchiveFailed
+	case "waiting_unarchive_done":
+		return StepWaitingUnarchiveDone
 	case "callback_failed":
 		return StepCallbackFailed
 	case "callback_done":
