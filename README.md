@@ -29,7 +29,7 @@ Follow below steps to use go client
   func main()  {
       client := migration.NewClient("https://api.estafette.io", "<Client-ID>", "<Client-Secret>")
       callbackURL := "https://your-callback-url"
-      req := migration.TaskRequest{
+      req := migration.Request{
           ID:          "existing-id", // optional if creating a new migration task
           FromSource:  "bitbucket.com",
           FromOwner:   "owner1",
@@ -40,7 +40,7 @@ Follow below steps to use go client
           CallbackURL: &callbackURL, // optional
           Restart:     migration.BuildLogsStage, // optional, default is LastStage (handled by the server)
       }
-      task, err := client.QueueMigration(req)
+      task, err := client.Queue(req)
       if err != nil {
           panic(err)
       }
@@ -60,7 +60,7 @@ Follow below steps to use go client
   func main()  {
       client := migration.NewClient("https://api.estafette.io", "<Client-ID>", "<Client-Secret>")
       callbackURL := "https://your-callback-url"
-      req := migration.TaskRequest{
+      req := migration.Request{
           ID:          "existing-id", // optional if creating a new migration task
           FromSource:  "bitbucket.com",
           FromOwner:   "owner1",
@@ -71,14 +71,10 @@ Follow below steps to use go client
           CallbackURL: &callbackURL, // optional
           Restart:     migration.BuildLogsStage, // optional, default is LastStage (handled by the server)
       }
-      task, err := client.QueueMigration(req)
+      task, err := client.Queue(req)
       if err != nil {
           panic(err)
       }
       fmt.Sprintf("Migration task %v queued", task.ID)
   }
   ```
-
-```
-
-```
